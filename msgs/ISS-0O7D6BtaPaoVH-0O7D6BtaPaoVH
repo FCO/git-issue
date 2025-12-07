@@ -1,0 +1,3 @@
+It should exists a JS page to be added on a "pages" from the
+repo host (github, gitlab, etc) that would use its API to
+access the refs/issues/* and show and edit issues.

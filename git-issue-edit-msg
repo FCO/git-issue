@@ -13,15 +13,13 @@ edit-msg() {
     local path="msgs/$msg_id"
 
     local message_file=$(mktemp)
-    echo $message_file
     git show $ref:$path > $message_file
-    cat $message_file
 
     $EDITOR $message_file
     local sha1_msg=$(git hash-object -w $message_file)
 
     local msgs_tree=$(mktemp)
-    git ls-tree refs/issues/$iss_id msgs/ | grep -v "msgs/$msg_id" | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
+    git ls-tree refs/issues/$iss_id msgs/ | grep -v $path | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
 
     echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
 

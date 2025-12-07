@@ -1,7 +1,7 @@
 #!/bin/bash
 
 new() {
-    local title=$1
+    local title="$@"
 
     if [ -z "$title" ]; then
 	echo -n "Issue title: "

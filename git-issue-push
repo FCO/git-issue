@@ -1,0 +1,3 @@
+push() {
+	git push origin 'refs/issues/*:refs/issues/*'
+}

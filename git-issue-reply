@@ -1,0 +1,36 @@
+#!/bin/bash
+
+reply() {
+    local iss_id=$1
+
+    if [ -z "$iss_id" ]; then
+	echo -n "Issue id: "
+	read iss_id
+    fi
+
+    local message_file=$(mktemp)
+    $EDITOR $message_file
+    local sha1_msg=$(git hash-object -w $message_file)
+
+    local msg_id=$iss_id-$(gen_id)
+
+    local msgs_tree=$(mktemp)
+    git ls-tree refs/issues/$iss_id msgs/ | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
+
+    echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
+
+    local sha1_msgs_tree=$(git mktree < $msgs_tree)
+
+    local tree=$(mktemp)
+    git ls-tree refs/issues/$iss_id | grep -v "\tmsgs$" > $tree
+
+    echo "040000 tree $sha1_msgs_tree	msgs" >> $tree
+
+    local sha1_tree=$(git mktree < $tree)
+
+    local commit_hash=$(echo "New reply for issue: ($msg_id)" | git commit-tree $sha1_tree)
+
+    git update-ref refs/issues/$iss_id $commit_hash
+
+    echo "$msg_id"
+}

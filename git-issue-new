@@ -1,0 +1,41 @@
+#!/bin/bash
+
+new() {
+    local title=$1
+
+    if [ -z "$title" ]; then
+	echo -n "Issue title: "
+	read title
+    fi
+
+    local sha1_title=$(git hash-object -w <(echo $title))
+    local sha1_status=$(git hash-object -w <(echo "open"))
+
+    local message_file=$(mktemp)
+    $EDITOR $message_file
+    local sha1_msg=$(git hash-object -w $message_file)
+
+    local ID=$(gen_id)
+    local iss_id="ISS-$ID"
+    local msg_id="$iss_id-$ID"
+
+    local msgs_tree=$(mktemp)
+
+    echo "100644 blob $sha1_msg	$msg_id" > $msgs_tree
+
+    local sha1_msgs_tree=$(git mktree < $msgs_tree)
+
+    local tree=$(mktemp)
+
+    echo "100644 blob $sha1_title	title"   > $tree
+    echo "100644 blob $sha1_status	status" >> $tree
+    echo "040000 tree $sha1_msgs_tree	msgs"   >> $tree
+
+    local sha1_tree=$(git mktree < $tree)
+
+    local commit_hash=$(echo "Issue created: $title ($msg_id)" | git commit-tree $sha1_tree)
+
+    git update-ref refs/issues/$iss_id $commit_hash
+
+    echo $iss_id
+}

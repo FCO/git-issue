@@ -1,0 +1,42 @@
+#!/bin/bash
+
+edit-msg() {
+    local msg_id=$1
+
+    if [ -z "$msg_id" ]; then
+	echo -n "Message id: "
+	read msg_id
+    fi
+
+    local iss_id=$(echo $msg_id | perl -nalE 'say $1 if /^(ISS-\w{14})-\w{14}/')
+    local ref="refs/issues/$iss_id"
+    local path="msgs/$msg_id"
+
+    local message_file=$(mktemp)
+    echo $message_file
+    git show $ref:$path > $message_file
+    cat $message_file
+
+    $EDITOR $message_file
+    local sha1_msg=$(git hash-object -w $message_file)
+
+    local msgs_tree=$(mktemp)
+    git ls-tree refs/issues/$iss_id msgs/ | grep -v "msgs/$msg_id" | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
+
+    echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
+
+    local sha1_msgs_tree=$(git mktree < $msgs_tree)
+
+    local tree=$(mktemp)
+    git ls-tree refs/issues/$iss_id | grep -v "\tmsgs$" > $tree
+
+    echo "040000 tree $sha1_msgs_tree	msgs" >> $tree
+
+    local sha1_tree=$(git mktree < $tree)
+
+    local commit_hash=$(echo "Reply edited: ($msg_id)" | git commit-tree $sha1_tree)
+
+    git update-ref refs/issues/$iss_id $commit_hash
+
+    echo "$msg_id"
+}

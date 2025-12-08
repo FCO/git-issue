@@ -15,11 +15,11 @@ edit-msg() {
     local message_file=$(mktemp)
     git show $ref:$path > $message_file
 
-    $EDITOR $message_file
+    "${EDITOR:=${VISUAL:-vi}}" $message_file
     local sha1_msg=$(git hash-object -w $message_file)
 
     local msgs_tree=$(mktemp)
-    git ls-tree refs/issues/$iss_id msgs/ | grep -v $path | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
+    git ls-tree "$ref" msgs/ | grep -F -v -- "$path" | perl -palE 's{\tmsgs/}{\t}' > "$msgs_tree"
 
     echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
 
@@ -32,7 +32,8 @@ edit-msg() {
 
     local sha1_tree=$(git mktree < $tree)
 
-    local commit_hash=$(echo "Reply edited: ($msg_id)" | git commit-tree $sha1_tree)
+    local parent=$(git show-ref --verify --hash "$ref")
+    local commit_hash=$(echo "Reply edited: ($msg_id)" | git commit-tree $sha1_tree -p $parent)
 
     git update-ref refs/issues/$iss_id $commit_hash
 

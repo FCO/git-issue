@@ -5,7 +5,7 @@ show() {
     local ref="refs/issues/$ID"
     local title=$(git show $ref:title)
     echo -e "$ID - $title\n"
-    git ls-tree --format="%(path)" $ref msgs/ | while read path; do
+    git ls-tree --name-only "$ref" msgs/ | while read path; do
     local msg_id=$(echo $path | perl -nalE 'say $1 if m{([^/]+)$}')
 	local author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
         echo -e "\t$author ($msg_id):"

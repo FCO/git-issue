@@ -8,11 +8,11 @@ new() {
 	read title
     fi
 
-    local sha1_title=$(git hash-object -w <(echo $title))
+    local sha1_title=$(printf %s "$title" | git hash-object -w --stdin)
     local sha1_status=$(git hash-object -w <(echo "open"))
 
     local message_file=$(mktemp)
-    $EDITOR $message_file
+    "${EDITOR:=${VISUAL:-vi}}" $message_file
     local sha1_msg=$(git hash-object -w $message_file)
 
     local ID=$(gen_id)

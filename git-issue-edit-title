@@ -14,17 +14,18 @@ edit-title() {
     local title_file=$(mktemp)
     git show $ref:$path > $title_file
 
-    $EDITOR $title_file
+    "${EDITOR:=${VISUAL:-vi}}" $title_file
     local sha1_title=$(git hash-object -w $title_file)
 
 
     local tree=$(mktemp)
-    git ls-tree refs/issues/$iss_id | grep -v "\t$path$" > $tree
+    git ls-tree $ref | grep -v "\t$path$" > $tree
     echo "100644 blob $sha1_title	$path" >> $tree
 
     local sha1_tree=$(git mktree < $tree)
+    local parent=$(git show-ref --verify --hash "$ref")
 
-    local commit_hash=$(echo "Title edited: ($iss_id)" | git commit-tree $sha1_tree)
+    local commit_hash=$(echo "Title edited: ($iss_id)" | git commit-tree $sha1_tree -p $parent)
 
     git update-ref refs/issues/$iss_id $commit_hash
 

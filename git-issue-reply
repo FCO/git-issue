@@ -9,13 +9,14 @@ reply() {
     fi
 
     local message_file=$(mktemp)
-    $EDITOR $message_file
+    "${EDITOR:=${VISUAL:-vi}}" $message_file
     local sha1_msg=$(git hash-object -w $message_file)
 
     local msg_id=$iss_id-$(gen_id)
 
     local msgs_tree=$(mktemp)
-    git ls-tree refs/issues/$iss_id msgs/ | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
+    local ref="refs/issues/$iss_id"
+    git ls-tree $ref msgs/ | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
 
     echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
 
@@ -28,7 +29,8 @@ reply() {
 
     local sha1_tree=$(git mktree < $tree)
 
-    local commit_hash=$(echo "New reply for issue: ($msg_id)" | git commit-tree $sha1_tree)
+    local parent=$(git show-ref --verify --hash "$ref")
+    local commit_hash=$(echo "New reply for issue: ($msg_id)" | git commit-tree $sha1_tree -p $parent)
 
     git update-ref refs/issues/$iss_id $commit_hash
 

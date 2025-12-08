@@ -1,91 +1,91 @@
 # git-issue
 
-git-issue é um conjunto de scripts que usa o próprio object store do Git para gerenciar “issues” como referências (`refs/issues/*`) e árvores/commits, sem depender de um servidor externo. Ele também inclui uma página web (React) que lê essas refs via API do GitHub e exibe as issues e mensagens.
+A small set of Git scripts that manage issues directly in Git’s object store, modeling each issue as a ref (`refs/issues/*`) with trees/commits — no external server required. It also includes a React web page that reads those refs via the GitHub API and displays issues and messages.
 
-## Conceito
+## Concept
 
-- Cada issue é um ref: `refs/issues/ISS-<ID>` apontando para um commit cujo tree contém:
-  - `title`: blob com o título da issue
-  - `status`: blob com o estado (ex.: `open`)
-  - `msgs/`: diretório com blobs, cada um representando uma mensagem/resposta (`ISS-<id>-<id_msg>`) 
-- Operações (new/reply/edit) constroem árvores com `git mktree` e criam commits com `git commit-tree`, atualizando o ref via `git update-ref`.
+- Each issue is a ref: `refs/issues/ISS-<ID>` pointing to a commit whose tree contains:
+  - `title`: blob with the issue title
+  - `status`: blob with the issue state (e.g., `open`)
+  - `msgs/`: directory with blobs, each representing a message/reply (`ISS-<id>-<id_msg>`)
+- Operations (`new`/`reply`/`edit`) assemble trees with `git mktree` and create commits with `git commit-tree`, then update the ref via `git update-ref`.
 
-## Requisitos
+## Requirements
 
-- Git instalado e configurado (`user.name` e `user.email`).
-- `$EDITOR` (ou `$VISUAL`) definido; se não estiver, os scripts usam `vi` por padrão.
+- Git installed and configured (`user.name` and `user.email`).
+- `$EDITOR` (or `$VISUAL`) set; if not, scripts fall back to `vi`.
 
-## Scripts disponíveis
+## Available scripts
 
-- `./git-issue new "Título da issue"`
-  - Cria uma nova issue. Abre o editor para a primeira mensagem. 
-  - Atualiza `refs/issues/ISS-<ID>` com um commit raiz (sem parent), contendo `title`, `status` e `msgs/<msg_id>`.
+- `./git-issue new "Issue title"`
+  - Creates a new issue. Opens the editor for the first message.
+  - Updates `refs/issues/ISS-<ID>` with a root commit (no parent) containing `title`, `status`, and `msgs/<msg_id>`.
 - `./git-issue show ISS-<ID>`
-  - Mostra o título e lista todas as mensagens (`msgs/*`), indicando o autor do commit que inclui cada mensagem.
+  - Shows the title and lists all messages (`msgs/*`), indicating the author of the commit that includes each message.
 - `./git-issue reply ISS-<ID>`
-  - Adiciona uma mensagem na issue. Abre o editor para o conteúdo. 
-  - Cria um commit com parent no tip atual de `refs/issues/ISS-<ID>` e atualiza o ref.
+  - Adds a message to the issue. Opens the editor for the content.
+  - Creates a commit with a parent pointing to the current tip of `refs/issues/ISS-<ID>` and updates the ref.
 - `./git-issue edit-title ISS-<ID>`
-  - Edita o título da issue, criando um novo commit (com parent) e atualizando o ref.
+  - Edits the issue title, creating a new commit (with parent) and updating the ref.
 - `./git-issue edit-msg <MSG_ID>`
-  - Edita o conteúdo de uma mensagem específica, preservando o id e criando novo commit.
+  - Edits the content of a specific message, preserving its id and creating a new commit.
 - `./git-issue ls`
-  - Lista todas as issues (`refs/issues/*`) com seus títulos.
+  - Lists all issues (`refs/issues/*`) with their titles.
 - `./git-issue pull` / `./git-issue push` / `./git-issue sync`
-  - Sincronizam os refs de issues com o remoto: fetch/push de `refs/issues/*`.
+  - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
 
-## Fluxo recomendado
+## Recommended workflow
 
-1. Antes de responder/editar em um clone novo, traga os refs de issues:
-   - `git fetch origin 'refs/issues/*:refs/issues/*'` ou `./git-issue pull`
-2. Crie respostas/edições normalmente (`reply`, `edit-*`).
-3. Faça push:
-   - `git push origin 'refs/issues/*:refs/issues/*'` ou `./git-issue push`
+1. Before replying/editing in a fresh clone, fetch issue refs:
+   - `git fetch origin 'refs/issues/*:refs/issues/*'` or `./git-issue pull`
+2. Create replies/edits (`reply`, `edit-*`).
+3. Push:
+   - `git push origin 'refs/issues/*:refs/issues/*'` or `./git-issue push`
 
-Se o push for rejeitado (non-fast-forward), traga as atualizações (`pull`) e re‑aplique sua alteração na ponta atual (os scripts já usam o parent do tip local). Evite criar respostas com ref inexistente localmente, pois isso gera commits raiz.
+If push is rejected (non-fast-forward), fetch updates (`pull`) and re-apply your change on the current tip (scripts already use the local tip as parent). Avoid creating replies when the ref doesn’t exist locally, as that produces root commits.
 
 ## Web (GitHub Pages)
 
-Há um app em `web/` (React + Vite) que consome a API do GitHub para:
-- Listar issues lendo `matching-refs` em `refs/issues/*`.
-- Exibir uma issue (título e mensagens). Para cada mensagem, mostra o autor do primeiro commit que adicionou aquele arquivo.
+There’s an app under `web/` (React + Vite) that consumes the GitHub API to:
+- List issues via `matching-refs` under `refs/issues/*`.
+- Display an issue (title and messages). For each message, it shows the author of the first commit that added that file.
 
 Link (GitHub Pages):
 - https://FCO.github.io/git-issue/
 
-### Rodando localmente
+### Run locally
 
 - `cd web`
 - `npm install`
 - `npm run dev`
 
-### Publicando no GitHub Pages
+### Publish to GitHub Pages
 
-O repositório já está configurado para publicar a partir da pasta `docs/` ou via branch `gh-pages`.
+The repository is set up to publish from the `docs/` folder or via a `gh-pages` branch.
 
-- Deploy via `docs/` (branch main):
+- Deploy via `docs/` (main branch):
   - `cd web && npm run deploy`
-  - Isso faz build e copia `web/dist` → `docs/`. Faça commit/push da pasta `docs/`.
-  - Em Settings → Pages, selecione Source: Deploy from a branch, Branch: `main`, Folder: `/docs`.
+  - Builds and copies `web/dist` → `docs/`. Commit/push the `docs/` folder.
+  - In Settings → Pages, select Source: Deploy from a branch, Branch: `main`, Folder: `/docs`.
 
 - Deploy via `gh-pages`:
-  - Crie a branch `gh-pages` se ainda não existir: `git branch gh-pages && git push -u origin gh-pages`
+  - Create the `gh-pages` branch if it doesn’t exist: `git branch gh-pages && git push -u origin gh-pages`
   - `cd web && npm run deploy:ghpages`
-  - Em Settings → Pages, selecione Branch: `gh-pages`, Folder: `/root`.
+  - In Settings → Pages, select Branch: `gh-pages`, Folder: `/root`.
 
-### Limites de API / Cache
+### API limits / Cache
 
-- Requests sem autenticação: ~60 por hora por IP; com token: ~5.000/h.
-- O app usa `ETag` e `If-None-Match` (localStorage) para reduzir chamadas e respeitar rate limits.
-- Para aumentar limites, defina um token e adicione `Authorization: Bearer <TOKEN>` (pode ser parametrizado via `.env` no app).
+- Unauthenticated requests: ~60/hour per IP; with token: ~5,000/hour.
+- The app uses `ETag` and `If-None-Match` (localStorage) to reduce calls and respect rate limits.
+- To raise limits, set a token and add `Authorization: Bearer <TOKEN>` (can be parameterized via `.env` in the app).
 
-## Dicas e troubleshooting
+## Tips and troubleshooting
 
-- “Failed to fetch” / rate limit: autentique e/ou aguarde o `X-RateLimit-Reset`; verifique headers: `X-RateLimit-*`.
-- “non-fast-forward” ao dar push: faça `./git-issue pull` e refaça sua resposta/edição; verifique o parent do commit:
+- “Failed to fetch” / rate limit: authenticate and/or wait for `X-RateLimit-Reset`; check headers: `X-RateLimit-*`.
+- “non-fast-forward” on push: run `./git-issue pull` and re-apply your reply/edit; verify commit parent:
   - `git log --pretty='%H %P' -n 1 $(git rev-parse refs/issues/ISS-<ID>)`
-- Editor vazio: defina `$EDITOR` ou `$VISUAL`; por padrão será `vi`.
+- Empty editor: set `$EDITOR` or `$VISUAL`; default is `vi`.
 
-## Licença
+## License
 
-Este projeto é experimental e usa Git como backend para issues. Use com cuidado e faça backup dos seus refs/objetos conforme necessário.
+This project is experimental and uses Git as the backend for issues. Use with care and back up your refs/objects as needed.

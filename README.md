@@ -15,23 +15,33 @@ A small set of Git scripts that manage issues directly in Git’s object store, 
 - Git installed and configured (`user.name` and `user.email`).
 - `$EDITOR` (or `$VISUAL`) set; if not, scripts fall back to `vi`.
 
+## Installation
+
+Ensure the git-issue scripts are available on your `PATH` so Git can discover the `git issue` subcommand:
+
+- Add this repository (or the folder containing `git-issue*` files) to your `PATH`.
+- Git will automatically run `git-issue` when you type `git issue ...` if an executable named `git-issue` is on `PATH`.
+- Example (bash/zsh):
+  - `export PATH="$PATH:/path/to/git-issue-repo"`
+  - Or symlink: `ln -s /path/to/git-issue-repo/git-issue /usr/local/bin/git-issue`
+
 ## Available scripts
 
-- `./git-issue new "Issue title"`
+- `git issue new "Issue title"`
   - Creates a new issue. Opens the editor for the first message.
   - Updates `refs/issues/ISS-<ID>` with a root commit (no parent) containing `title`, `status`, and `msgs/<msg_id>`.
-- `./git-issue show ISS-<ID>`
+- `git issue show ISS-<ID>`
   - Shows the title and lists all messages (`msgs/*`), indicating the author of the commit that includes each message.
-- `./git-issue reply ISS-<ID>`
+- `git issue reply ISS-<ID>`
   - Adds a message to the issue. Opens the editor for the content.
   - Creates a commit with a parent pointing to the current tip of `refs/issues/ISS-<ID>` and updates the ref.
-- `./git-issue edit-title ISS-<ID>`
+- `git issue edit-title ISS-<ID>`
   - Edits the issue title, creating a new commit (with parent) and updating the ref.
-- `./git-issue edit-msg <MSG_ID>`
+- `git issue edit-msg <MSG_ID>`
   - Edits the content of a specific message, preserving its id and creating a new commit.
-- `./git-issue ls`
+- `git issue ls`
   - Lists all issues (`refs/issues/*`) with their titles.
-- `./git-issue pull` / `./git-issue push` / `./git-issue sync`
+- `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
 
 ## Recommended workflow

@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run build && rm -rf ../docs && mkdir -p ../docs && cp -R dist/* ../docs/",
+    "deploy": "node -e \"require('child_process').spawnSync('../git-issue-generate-page', { stdio: 'inherit', shell: true })\"",
     "deploy:ghpages": "npm run build && git worktree add ../.gh-pages gh-pages || true && rm -rf ../.gh-pages/* && cp -R dist/* ../.gh-pages/ && cd ../.gh-pages && git add -A && git commit -m 'Deploy to GitHub Pages' || true && git push origin gh-pages && cd - && git worktree remove ../.gh-pages || true"
   },
   "dependencies": {

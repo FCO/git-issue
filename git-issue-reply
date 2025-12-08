@@ -1,12 +1,16 @@
 #!/bin/bash
 
 reply() {
-    local iss_id=$1
+    local ID=$1
 
-    if [ -z "$iss_id" ]; then
-	echo -n "Issue id: "
-	read iss_id
+    if [ -z "$ID" ]; then
+	ls
+	echo -en "\nIssue id: "
+	read ID
     fi
+    local iss_id=$(git log --pretty=format:%H $ID 2> /dev/null || echo $ID)
+
+    show $iss_id | less
 
     local message_file=$(mktemp)
     "${EDITOR:=${VISUAL:-vi}}" $message_file

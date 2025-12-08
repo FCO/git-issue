@@ -1,4 +1,5 @@
 sync() {
 	pull
 	push
+	pull
 }

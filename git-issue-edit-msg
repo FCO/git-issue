@@ -1,16 +1,34 @@
 #!/bin/bash
 
 edit-msg() {
-    local msg_id=$1
+    local ID=$1
 
-    if [ -z "$msg_id" ]; then
-	echo -n "Message id: "
-	read msg_id
+    if [ -z "$ID" ]; then
+	ls
+	echo -en "\nIssue id: "
+	read ID
     fi
+    local iss_id=$(git log --pretty=format:%H $ID 2> /dev/null || echo $ID)
 
-    local iss_id=$(echo $msg_id | perl -nalE 'say $1 if /^(ISS-\w{14})-\w{14}/')
     local ref="refs/issues/$iss_id"
-    local path="msgs/$msg_id"
+    local $msg_no=-1
+    if [ -z "$2" ]; then
+	show $iss_id
+	echo "Message number: "
+	read msg_no
+    else
+	msg_no=$2
+    fi
+    [ "$msg_no" -lt 0 ] && die "Message number invalid"
+
+    local path=$(git ls-tree --name-only "$ref" msgs/ | while read path; do
+	msg_no=$(( $msg_no - 1 ))
+	[ "$msg_no" -eq 0 ] && echo $path
+    done)
+
+    [ -z "$path" ] && die "Message number invalid"
+
+    local msg_id=$(echo $path | perl -palE 's{msgs/}{}')
 
     local message_file=$(mktemp)
     git show $ref:$path > $message_file

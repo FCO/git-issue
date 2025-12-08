@@ -2,14 +2,27 @@
 
 show() {
     local ID=$1
-    local ref="refs/issues/$ID"
-    local title=$(git show $ref:title)
-    echo -e "$ID - $title\n"
+
+    if [ -z "$ID" ]; then
+	ls
+	echo -en "\nIssue id: "
+	read ID
+    fi
+    local iss_id=$(git log --pretty=format:%H $ID 2> /dev/null || echo $ID)
+
+    local abb=$(git log --pretty=format:%h $ID | tail -1 2> /dev/null || echo $ID)
+    local ref="refs/issues/$iss_id"
+    local title=$(git show $ref:title 2> /dev/null)
+    [ -z "$title" ] && die "Not a valid issue id"
+    echo -e "$abb - $title\n"
+    local index=1
     git ls-tree --name-only "$ref" msgs/ | while read path; do
-    local msg_id=$(echo $path | perl -nalE 'say $1 if m{([^/]+)$}')
 	local author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
-        echo -e "\t$author ($msg_id):"
-	git show $ref:$path | while read line; do echo -e "\t\t$line"; done
+	echo -e "\t$index) $author:"
+	git show $ref:$path | while read line; do
+	    echo -e "\t\t$line"
+	done
+	index=$(($index + 1))
 	echo
     done
 }

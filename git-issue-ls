@@ -3,7 +3,9 @@
 ls() {
     git for-each-ref --format="%(refname)" refs/issues/ | while read ref; do
         local ID=$(echo $ref | perl -nalE 'say $1 if m{([^/]+?)$}')
-	local title=$(git show $ref:title)
-	echo $ID - $title
+	echo $(git log --pretty=format:"%ct $ref %h" $ID -- 2> /dev/null || echo "0 $ref $ID")
+    done | sort | while read _ ref ID; do
+        local title=$(git show $ref:title)
+        [ "$(git show $ref:status)"  == "open" ] && echo $ID - $title
     done
 }

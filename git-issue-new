@@ -8,20 +8,24 @@ new() {
 	read title
     fi
 
+    debug "title: $title"
     local sha1_title=$(printf %s "$title" | git hash-object -w --stdin)
+    debug "sha1_title: $sha1_title"
+
     local sha1_status=$(git hash-object -w <(echo "open"))
+    debug "sha1_status: $sha1_status"
 
     local message_file=$(mktemp)
     "${EDITOR:=${VISUAL:-vi}}" $message_file
-    local sha1_msg=$(git hash-object -w $message_file)
+    debug-cat $message_file
 
-    local ID=$(gen_id)
-    local iss_id="ISS-$ID"
-    local msg_id="$iss_id-$ID"
+    local msg_id=$(gen_id)
+    local sha1_msg=$(git hash-object -w $message_file)
 
     local msgs_tree=$(mktemp)
 
     echo "100644 blob $sha1_msg	$msg_id" > $msgs_tree
+    debug-cat $msgs_tree
 
     local sha1_msgs_tree=$(git mktree < $msgs_tree)
 
@@ -30,12 +34,13 @@ new() {
     echo "100644 blob $sha1_title	title"   > $tree
     echo "100644 blob $sha1_status	status" >> $tree
     echo "040000 tree $sha1_msgs_tree	msgs"   >> $tree
+    debug-cat $tree
 
     local sha1_tree=$(git mktree < $tree)
 
     local commit_hash=$(echo "Issue created: $title ($msg_id)" | git commit-tree $sha1_tree)
 
-    git update-ref refs/issues/$iss_id $commit_hash
+    git update-ref refs/issues/$commit_hash $commit_hash
 
-    echo $iss_id
+    echo $commit_hash
 }

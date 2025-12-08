@@ -1,67 +1,210 @@
 #!/bin/bash
 
-# Generate a single-page HTML with embedded JS/CSS for browsing git-issue refs
-# - Builds the React app under web/
-# - Inlines built JS and CSS into one self-contained index.html
-# - Writes output to docs/index.html (creating docs/ if needed)
+# Generate multiple static HTML pages for git issues
+# - Index page (lista) based on git-issue-ls logic
+# - One page per issue (detalhes) based on git-issue-show logic
+# - Dark theme, cross-linked pages with timestamps and permalinks
 #
-# Requirements: node/npm, vite
+# Requirements: git
 
-generate-page() {
-  set -euo pipefail
+set -euo pipefail
 
-  # Build the web app
-  echo "[git-issue] Building web app..."
-  npm --prefix "$(dirname "$0")/web" install >/dev/null 2>&1 || true
-  npm --prefix "$(dirname "$0")/web" run build
-
-  local dist_dir="$(dirname "$0")/web/dist"
-  local assets_dir="$dist_dir/assets"
-
-  if [ ! -d "$dist_dir" ]; then
-    echo "Build output not found: $dist_dir" >&2
-    exit 1
-  fi
-
-  # Find built asset files
-  local css_file js_file
-  css_file=$(ls "$assets_dir"/*.css 2>/dev/null | head -n1 || true)
-  js_file=$(ls "$assets_dir"/*.js 2>/dev/null | head -n1 || true)
-
-  if [ -z "$js_file" ]; then
-    echo "No JS asset found in $assets_dir" >&2
-    exit 1
-  fi
-
-  # Read base HTML
-  local base_html
-  base_html=$(cat "$dist_dir/index.html")
-
-  # Inline CSS if present
-  local inline_css=""
-  if [ -n "$css_file" ]; then
-    inline_css=$(cat "$css_file")
-    base_html=$(echo "$base_html" | sed "s#<link rel=\\\"stylesheet\\\" href=\\\"/assets/[^\\\"]*\\\">#<style>$inline_css</style>#")
-  fi
-
-  # Inline JS
-  local inline_js
-  inline_js=$(cat "$js_file")
-  # Replace the script tag that points to /assets/index-*.js with inline
-  base_html=$(echo "$base_html" | sed "s#<script type=\\\"module\\\" crossorigin src=\\\"/assets/[^\\\"]*\\\"></script>#<script type=\"module\">$inline_js</script>#")
-
-  # Ensure root script (in dev index) is removed/handled
-  base_html=$(echo "$base_html" | sed "s#<script type=\\\"module\\\" src=\\\"/src/main.jsx\\\"></script>##g")
-
-  # Write to docs/index.html
-  local out_dir="$(dirname "$0")/docs"
-  mkdir -p "$out_dir"
-  echo "$base_html" > "$out_dir/index.html"
-
-  echo "[git-issue] Generated page: $out_dir/index.html"
+escape_html() {
+  sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
 
-# Allow direct execution
+list_open_issues() {
+  # Returns: id|abb|ref|title (sorted by timestamp like git-issue-ls)
+  git for-each-ref --format="%(refname)" refs/issues/ | while read -r ref; do
+    local ID
+    ID=$(echo "$ref" | perl -nalE 'say $1 if m{([^/]+?)$}')
+    echo $(git log --pretty=format:"%ct $ref %h" "$ID" -- 2>/dev/null || echo "0 $ref $ID")
+  done | sort | while read -r _ ref third; do
+    local title abb id
+    title=$(git show "$ref:title" 2>/dev/null || echo "")
+    abb="$third"
+    id=$(echo "$ref" | perl -nalE 'say $1 if m{([^/]+?)$}')
+    if [ -n "$title" ]; then
+      echo "$id|$abb|$ref|$title"
+    fi
+  done
+}
+
+page_head() {
+  local title="$1"
+  cat <<EOF
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>$title</title>
+  <style>
+    :root{color-scheme:dark light}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;background:#0b0e11;color:#e6e6e6}
+    .wrap{max-width:960px;margin:0 auto;padding:2rem}
+    header{margin-bottom:2rem}
+    header h1{margin:0 0 .25rem 0;font-size:1.7rem;color:#f0f3f6}
+    header p{margin:0;color:#aeb6c2}
+    .card{padding:1rem;border:1px solid #1f2630;background:#0f1318;border-radius:12px}
+    .list{list-style:none;padding:0;margin:0}
+    .list li{margin:.25rem 0;padding:.75rem;border-radius:10px;border:1px solid #1b2330;background:#0c1217;display:flex;gap:.5rem;align-items:center;justify-content:space-between}
+    .list li:hover{background:#0e141a}
+    .list .left{display:flex;gap:.5rem;align-items:center}
+    a{color:#79b8ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .issue-title{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+    .badge{font-size:.78rem;background:#18202b;color:#bcd1ef;padding:.22rem .5rem;border-radius:999px;border:1px solid #263246}
+    .muted{color:#8fa1b8}
+    .status{margin-left:auto;font-size:.82rem;padding:.2rem .6rem;border-radius:999px;border:1px solid #263246;background:#18202b;color:#bcd1ef}
+    .header-row{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+    .msg{margin:.75rem 0;padding:.75rem;border-radius:10px;border:1px solid #1b2330;background:#0c1217}
+    .msg-author{font-weight:600;color:#bcd1ef}
+    .msg-meta{display:flex;gap:.5rem;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+    .msg-body{white-space:pre-wrap;line-height:1.6}
+    .permalink{font-size:.8rem;color:#9fb6d6}
+    .footer{margin-top:2rem;color:#6f7b8c}
+  </style>
+</head>
+<body>
+<div class="wrap">
+EOF
+}
+
+page_tail() {
+  cat <<'EOF'
+  <div class="footer">Gerado por git-issue-generate-page</div>
+</div>
+</body>
+</html>
+EOF
+}
+
+write_index_page() {
+  local out_dir="$1"
+  local out_file="$out_dir/index.html"
+  page_head "Issues" > "$out_file"
+  {
+    echo "  <header>"
+    echo "    <h1>Issues</h1>"
+    echo "    <p class=\"muted\">Lista baseada na lógica do git-issue-ls</p>"
+    echo "  </header>"
+    echo "  <div class=\"card\">"
+    echo "    <ul class=\"list\">"
+    local any=0
+    list_open_issues | while IFS='|' read -r id abb ref title; do
+      any=1
+      local slug="$abb"
+      # compute opened timestamp (earliest %ai among msgs/*)
+      local opened_ai ts_ai
+      opened_ai=""
+      while read -r path; do
+        [ -z "$path" ] && continue
+        ts_ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+        if [ -z "$opened_ai" ] || [ "$ts_ai" \< "$opened_ai" ]; then
+          opened_ai="$ts_ai"
+        fi
+      done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+      echo -n "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"issues/$slug.html\">$(printf "%s" "$title" | escape_html)</a></div>"
+      if [ -n "$opened_ai" ]; then
+        echo " <span class=\"muted\">$opened_ai</span></li>"
+      else
+        echo "</li>"
+      fi
+    done
+    if [ "$any" -eq 0 ]; then
+      echo "      <li>Nenhuma issue encontrada.</li>"
+    fi
+    echo "    </ul>"
+    echo "  </div>"
+  } >> "$out_file"
+  page_tail >> "$out_file"
+  echo "[git-issue] Index: $out_file"
+}
+
+write_issue_page() {
+  local out_dir="$1"
+  local id="$2"
+  local abb="$3"
+  local ref="$4"
+
+  local title status opener opened_ai
+  title=$(git show "$ref:title" 2>/dev/null)
+  status=$(git show "$ref:status" 2>/dev/null)
+  [ -z "$title" ] && return 0
+
+  opener=""
+  opened_ai=""
+  while read -r path; do
+    [ -z "$path" ] && continue
+    local ai author
+    ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+    author=$(git log --pretty=format:"%aN" "$ref" -- "$path" | tail -1)
+    if [ -z "$opened_ai" ] || [ "$ai" \< "$opened_ai" ]; then
+      opened_ai="$ai"; opener="$author"
+    fi
+  done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+
+  local slug="$abb"
+  local out_file="$out_dir/issues/$slug.html"
+  mkdir -p "$out_dir/issues"
+
+  page_head "$abb - $title" > "$out_file"
+  {
+    echo "  <header>"
+    echo "    <div class=\"header-row\">"
+    echo "      <span class=\"badge\">$abb</span>"
+    echo "      <h1>$(printf "%s" "$title" | escape_html)</h1>"
+    echo "      <span class=\"status\">$(printf "%s" "$status" | escape_html)</span>"
+    echo "    </div>"
+    if [ -n "$opened_ai" ]; then
+      echo "    <p class=\"muted\">Aberta por $(printf "%s" "$opener" | escape_html) em $opened_ai · <a href=\"../index.html\">← Voltar para lista</a></p>"
+    else
+      echo "    <p class=\"muted\">Aberta por $(printf "%s" "$opener" | escape_html) · <a href=\"../index.html\">← Voltar para lista</a></p>"
+    fi
+    echo "  </header>"
+
+    echo "  <section class=\"card\">"
+    echo "    <h2>Mensagens</h2>"
+
+    while read -r path; do
+      [ -z "$path" ] && continue
+      local author ai msg_id
+      author=$(git log --pretty=format:"%aN" "$ref" -- "$path" | tail -1)
+      ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+      msg_id=$(basename "$path")
+      echo "    <article id=\"$msg_id\" class=\"msg\">"
+      echo "      <div class=\"msg-meta\">"
+      echo "        <div class=\"msg-author\">$(printf "%s" "$author" | escape_html)</div>"
+      echo "        <div class=\"muted\">$ai</div>"
+      echo "        <div><a class=\"permalink\" href=\"#${msg_id}\" title=\"Copiar link\">#</a></div>"
+      echo "      </div>"
+      echo "      <div class=\"msg-body\">"
+      git show "$ref:$path" | escape_html
+      echo "      </div>"
+      echo "    </article>"
+    done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+
+    echo "  </section>"
+  } >> "$out_file"
+  page_tail >> "$out_file"
+  echo "[git-issue] Issue: $out_file"
+}
+
+generate_pages() {
+  local out_dir="$(dirname "$0")/docs"
+  mkdir -p "$out_dir"
+  echo "[git-issue] Generating index and issue pages..."
+
+  write_index_page "$out_dir"
+
+  list_open_issues | while IFS='|' read -r id abb ref title; do
+    write_issue_page "$out_dir" "$id" "$abb" "$ref"
+  done
+
+  echo "[git-issue] Done. Open docs/index.html"
+}
+
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
-  generate-page "$@"
+  generate_pages "$@"
 fi

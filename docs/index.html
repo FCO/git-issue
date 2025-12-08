@@ -1,13 +1,58 @@
 <!doctype html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Git Issues</title>
-    <script type="module" crossorigin src="/git-issue/assets/index-ZwWNF1Ww.js"></script>
-    <link rel="stylesheet" crossorigin href="/git-issue/assets/index-BqZaPf0m.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Issues</title>
+  <style>
+    :root{color-scheme:dark light}
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;background:#0b0e11;color:#e6e6e6}
+    .wrap{max-width:960px;margin:0 auto;padding:2rem}
+    header{margin-bottom:2rem}
+    header h1{margin:0 0 .25rem 0;font-size:1.7rem;color:#f0f3f6}
+    header p{margin:0;color:#aeb6c2}
+    .card{padding:1rem;border:1px solid #1f2630;background:#0f1318;border-radius:12px}
+    .list{list-style:none;padding:0;margin:0}
+    .list li{margin:.25rem 0;padding:.75rem;border-radius:10px;border:1px solid #1b2330;background:#0c1217;display:flex;gap:.5rem;align-items:center;justify-content:space-between}
+    .list li:hover{background:#0e141a}
+    .list .left{display:flex;gap:.5rem;align-items:center}
+    a{color:#79b8ff;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .issue-title{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap}
+    .badge{font-size:.78rem;background:#18202b;color:#bcd1ef;padding:.22rem .5rem;border-radius:999px;border:1px solid #263246}
+    .muted{color:#8fa1b8}
+    .status{margin-left:auto;font-size:.82rem;padding:.2rem .6rem;border-radius:999px;border:1px solid #263246;background:#18202b;color:#bcd1ef}
+    .header-row{display:flex;gap:.75rem;align-items:center;flex-wrap:wrap}
+    .msg{margin:.75rem 0;padding:.75rem;border-radius:10px;border:1px solid #1b2330;background:#0c1217}
+    .msg-author{font-weight:600;color:#bcd1ef}
+    .msg-meta{display:flex;gap:.5rem;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+    .msg-body{white-space:pre-wrap;line-height:1.6}
+    .permalink{font-size:.8rem;color:#9fb6d6}
+    .footer{margin-top:2rem;color:#6f7b8c}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Issues</h1>
+    <p class="muted">Lista baseada na lógica do git-issue-ls</p>
+  </header>
+  <div class="card">
+    <ul class="list">
+      <li><div class="left"><span class="badge">ISS-0O7D6BtaPaoVH</span> <a href="issues/ISS-0O7D6BtaPaoVH.html">Create JS to use git-issue from Web</a></div> <span class="muted">2025-12-07 21:13:48 +0000</span></li>
+      <li><div class="left"><span class="badge">ISS-0O7ElTi0SEBfi</span> <a href="issues/ISS-0O7ElTi0SEBfi.html">Test issue</a></div> <span class="muted">2025-12-08 00:16:47 +0000</span></li>
+      <li><div class="left"><span class="badge">b77b267</span> <a href="issues/b77b267.html">Testing ID using git hash</a></div></li>
+      <li><div class="left"><span class="badge">8489fb5</span> <a href="issues/8489fb5.html">Testing id using git hash 2</a></div> <span class="muted">2025-12-08 18:55:23 +0000</span></li>
+      <li><div class="left"><span class="badge">63d360e</span> <a href="issues/63d360e.html">Remove the JS page and use static HTML instead</a></div> <span class="muted">2025-12-08 19:20:53 +0000</span></li>
+      <li><div class="left"><span class="badge">2612f90</span> <a href="issues/2612f90.html">Is this going to work now?</a></div> <span class="muted">2025-12-08 19:39:45 +0000</span></li>
+      <li><div class="left"><span class="badge">31c64e7</span> <a href="issues/31c64e7.html">Testing!!!</a></div> <span class="muted">2025-12-08 19:53:36 +0000</span></li>
+      <li><div class="left"><span class="badge">5b19690</span> <a href="issues/5b19690.html">Bla</a></div> <span class="muted">2025-12-08 22:10:25 +0000</span></li>
+      <li><div class="left"><span class="badge">89becc6</span> <a href="issues/89becc6.html">Better title</a></div> <span class="muted">2025-12-08 22:11:10 +0000</span></li>
+      <li><div class="left"><span class="badge">82ce9ae</span> <a href="issues/82ce9ae.html">qwer</a></div> <span class="muted">2025-12-08 22:11:29 +0000</span></li>
+      <li>Nenhuma issue encontrada.</li>
+    </ul>
+  </div>
+  <div class="footer">Gerado por git-issue-generate-page</div>
+</div>
+</body>
 </html>

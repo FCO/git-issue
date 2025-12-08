@@ -1,3 +1,0 @@
-pull() {
-	git fetch origin 'refs/issues/*:refs/issues/*'
-}

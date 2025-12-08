@@ -1,9 +1,0 @@
-#!/bin/bash
-
-ls() {
-    git for-each-ref --format="%(refname)" refs/issues/ | while read ref; do
-        local ID=$(echo $ref | perl -nalE 'say $1 if m{([^/]+?)$}')
-	local title=$(git show $ref:title)
-	echo $ID - $title
-    done
-}

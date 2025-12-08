@@ -9,7 +9,7 @@ function Header() {
   return (
     <div className="header">
       <div className="container" style={{display:'flex',alignItems:'center',gap:12}}>
-        <Link to="/" className="repo">FCO/git-issue</Link>
+        <Link to="/git-issue/" className="repo">FCO/git-issue</Link>
         <span style={{color:'var(--muted)'}}>Issues</span>
       </div>
     </div>
@@ -18,7 +18,7 @@ function Header() {
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/git-issue">
       <Header />
       <div className="container">
         <Routes>

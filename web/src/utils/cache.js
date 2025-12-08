@@ -9,11 +9,24 @@ export async function cachedFetch(url, options = {}) {
 
   const headers = new Headers(options.headers || {})
   if (cached?.etag) headers.set('If-None-Match', cached.etag)
-  headers.set('User-Agent', headers.get('User-Agent') || 'git-issues-web')
+  // Do NOT set 'User-Agent' in browsers (forbidden request header)
   headers.set('Accept', headers.get('Accept') || 'application/vnd.github+json')
   headers.set('X-GitHub-Api-Version', headers.get('X-GitHub-Api-Version') || '2022-11-28')
 
-  const res = await fetch(url, { ...options, headers })
+  // Optional token from env or localStorage
+  const token = (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env.VITE_GITHUB_TOKEN) || localStorage.getItem('GITHUB_TOKEN')
+  if (token && !headers.has('Authorization')) {
+    headers.set('Authorization', `Bearer ${token}`)
+  }
+
+  let res
+  try {
+    res = await fetch(url, { ...options, headers })
+  } catch (e) {
+    // Network-level error (e.g., blocked header). If cached, return cached to avoid blank UI.
+    if (cached) return cached.value
+    throw e
+  }
 
   if (res.status === 304 && cached) {
     // Not modified; return cached value

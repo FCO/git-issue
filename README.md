@@ -61,7 +61,7 @@ There’s an app under `web/` (React + Vite) that consumes the GitHub API to:
 - Display an issue (title and messages). For each message, it shows the author of the first commit that added that file.
 
 Link (GitHub Pages):
-- https://FCO.github.io/git-issue/
+- https://fco.github.io/git-issue/
 
 ### Run locally
 

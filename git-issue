@@ -16,6 +16,14 @@ gen_id() {
 	printf "%09s%04s", convert($t), convert(rand 16_777_215)'
 }
 
-source "$(dirname $0)/git-issue-$1"
+source "$(dirname $0)/git-issue-edit-msg"
+source "$(dirname $0)/git-issue-edit-title"
+source "$(dirname $0)/git-issue-ls"
+source "$(dirname $0)/git-issue-new"
+source "$(dirname $0)/git-issue-pull"
+source "$(dirname $0)/git-issue-push"
+source "$(dirname $0)/git-issue-reply"
+source "$(dirname $0)/git-issue-show"
+source "$(dirname $0)/git-issue-sync"
 
 $1 ${@:2}

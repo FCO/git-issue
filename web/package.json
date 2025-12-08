@@ -1,0 +1,21 @@
+{
+  "name": "git-issues-web",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "deploy": "npm run build && rm -rf ../docs && mkdir -p ../docs && cp -R dist/* ../docs/",
+    "deploy:ghpages": "npm run build && git worktree add ../.gh-pages gh-pages || true && rm -rf ../.gh-pages/* && cp -R dist/* ../.gh-pages/ && cd ../.gh-pages && git add -A && git commit -m 'Deploy to GitHub Pages' || true && git push origin gh-pages && cd - && git worktree remove ../.gh-pages || true"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}

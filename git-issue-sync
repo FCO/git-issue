@@ -1,6 +1,3 @@
-source "$(dirname $0)/git-issue-pull"
-source "$(dirname $0)/git-issue-push"
-
 sync() {
 	pull
 	push

@@ -16,11 +16,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-      - name: Pull issue refs
+      - name: Fetch issue refs
+        shell: bash
         run: |
-          chmod +x ./git-issue-pull || true
-          ./git-issue-pull || git fetch origin 'refs/issues/*:refs/issues/*'
+          set -euxo pipefail
+          git config --global advice.objectNameWarning false || true
+          git remote -v
+          # Force update refs/issues/* into local refs
+          git fetch --no-tags --prune origin '+refs/issues/*:refs/issues/*'
+          echo "Fetched issue refs:" 
+          git for-each-ref --format='%(refname)' refs/issues/ || true
+          count=$(git for-each-ref refs/issues/ | wc -l)
+          if [ "$count" -eq 0 ]; then
+            echo "No issue refs fetched. Failing to avoid empty site." >&2
+            exit 1
+          fi
 
       - name: Generate static pages
         run: |

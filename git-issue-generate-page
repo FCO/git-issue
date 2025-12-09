@@ -34,7 +34,7 @@ page_head() {
   local title="$1"
   cat <<EOF
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -71,6 +71,120 @@ page_head() {
 EOF
 }
 
+write_index_page() {
+  local out_dir="$1"
+  local out_file="$out_dir/index.html"
+  page_head "Issues" > "$out_file"
+  {
+    echo "  <header>"
+    echo "    <h1>Issues</h1>"
+    echo "    <p class=\"muted\">List based on git-issue-ls logic</p>"
+    echo "  </header>"
+    echo "  <div class=\"card\">"
+    echo "    <ul class=\"list\">"
+
+    local issues
+    issues=$(list_open_issues || true)
+    if [ -z "$issues" ]; then
+      echo "      <li>No issues found.</li>"
+    else
+      while IFS='|' read -r id abb ref title; do
+        local slug="$abb"
+        local opened_ai ts_ai
+        opened_ai=""
+        while read -r path; do
+          [ -z "$path" ] && continue
+          ts_ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+          if [ -z "$opened_ai" ] || [ "$ts_ai" \< "$opened_ai" ]; then
+            opened_ai="$ts_ai"
+          fi
+        done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+        echo -n "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"issues/$slug.html\">$(printf "%s" "$title" | escape_html)</a></div>"
+        if [ -n "$opened_ai" ]; then
+          echo " <span class=\"muted\">$opened_ai</span></li>"
+        else
+          echo "</li>"
+        fi
+      done <<< "$issues"
+    fi
+
+    echo "    </ul>"
+    echo "  </div>"
+  } >> "$out_file"
+  page_tail >> "$out_file"
+  echo "[git-issue] Index: $out_file"
+}
+
+write_issue_page() {
+  local out_dir="$1"
+  local id="$2"
+  local abb="$3"
+  local ref="$4"
+
+  local title status opener opened_ai
+  title=$(git show "$ref:title" 2>/dev/null)
+  status=$(git show "$ref:status" 2>/dev/null)
+  [ -z "$title" ] && return 0
+
+  opener=""
+  opened_ai=""
+  while read -r path; do
+    [ -z "$path" ] && continue
+    local ai author
+    ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+    author=$(git log --pretty=format:"%aN" "$ref" -- "$path" | tail -1)
+    if [ -z "$opened_ai" ] || [ "$ai" \< "$opened_ai" ]; then
+      opened_ai="$ai"; opener="$author"
+    fi
+  done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+
+  local slug="$abb"
+  local out_file="$out_dir/issues/$slug.html"
+  mkdir -p "$out_dir/issues"
+
+  page_head "$abb - $title" > "$out_file"
+  {
+    echo "  <header>"
+    echo "    <div class=\"header-row\">"
+    echo "      <span class=\"badge\">$abb</span>"
+    echo "      <h1>$(printf \"%s\" \"$title\" | escape_html)</h1>"
+    echo "      <span class=\"status\">$(printf \"%s\" \"$status\" | escape_html)</span>"
+    echo "    </div>"
+    if [ -n "$opened_ai" ]; then
+      echo "    <p class=\"muted\">Opened by $(printf \"%s\" \"$opener\" | escape_html) on $opened_ai · <a href=\"../index.html\">← Back to list</a></p>"
+    else
+      echo "    <p class=\"muted\">Opened by $(printf \"%s\" \"$opener\" | escape_html) · <a href=\"../index.html\">← Back to list</a></p>"
+    fi
+    echo "  </header>"
+
+    echo "  <section class=\"card\">"
+    echo "    <h2>Messages</h2>"
+
+    while read -r path; do
+      [ -z "$path" ] && continue
+      local author ai msg_id
+      author=$(git log --pretty=format:"%aN" "$ref" -- "$path" | tail -1)
+      ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+      msg_id=$(basename "$path")
+      echo "    <article id=\"$msg_id\" class=\"msg\">"
+      echo "      <div class=\"msg-meta\">"
+      echo "        <div class=\"msg-author\">$(printf \"%s\" \"$author\" | escape_html)</div>"
+      echo "        <div class=\"muted\">$ai</div>"
+      echo "        <div><a class=\"permalink\" href=\"#${msg_id}\" title=\"Copy permalink\">#</a></div>"
+      echo "      </div>"
+      echo "      <div class=\"msg-body\">"
+      git show "$ref:$path" | escape_html
+      echo "      </div>"
+      echo "    </article>"
+    done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+
+    echo "  </section>"
+  } >> "$out_file"
+  page_tail >> "$out_file"
+  echo "[git-issue] Issue: $out_file"
+}
+
+
 page_tail() {
   cat <<'EOF'
   <div class="footer">Gerado por git-issue-generate-page</div>
@@ -91,36 +205,40 @@ write_index_page() {
     echo "  </header>"
     echo "  <div class=\"card\">"
     echo "    <ul class=\"list\">"
-    local any=0
-    list_open_issues | while IFS='|' read -r id abb ref title; do
-      any=1
-      local slug="$abb"
-      # compute opened timestamp (earliest %ai among msgs/*)
-      local opened_ai ts_ai
-      opened_ai=""
-      while read -r path; do
-        [ -z "$path" ] && continue
-        ts_ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
-        if [ -z "$opened_ai" ] || [ "$ts_ai" \< "$opened_ai" ]; then
-          opened_ai="$ts_ai"
-        fi
-      done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
-      echo -n "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"issues/$slug.html\">$(printf "%s" "$title" | escape_html)</a></div>"
-      if [ -n "$opened_ai" ]; then
-        echo " <span class=\"muted\">$opened_ai</span></li>"
-      else
-        echo "</li>"
-      fi
-    done
-    if [ "$any" -eq 0 ]; then
+
+    local issues
+    issues=$(list_open_issues || true)
+    if [ -z "$issues" ]; then
       echo "      <li>Nenhuma issue encontrada.</li>"
+    else
+      while IFS='|' read -r id abb ref title; do
+        local slug="$abb"
+        # compute opened timestamp (earliest %ai among msgs/*)
+        local opened_ai ts_ai
+        opened_ai=""
+        while read -r path; do
+          [ -z "$path" ] && continue
+          ts_ai=$(git log --pretty=format:"%ai" "$ref" -- "$path" | tail -1)
+          if [ -z "$opened_ai" ] || [ "$ts_ai" \< "$opened_ai" ]; then
+            opened_ai="$ts_ai"
+          fi
+        done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+        echo -n "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"issues/$slug.html\">$(printf "%s" "$title" | escape_html)</a></div>"
+        if [ -n "$opened_ai" ]; then
+          echo " <span class=\"muted\">$opened_ai</span></li>"
+        else
+          echo "</li>"
+        fi
+      done <<< "$issues"
     fi
+
     echo "    </ul>"
     echo "  </div>"
   } >> "$out_file"
   page_tail >> "$out_file"
   echo "[git-issue] Index: $out_file"
 }
+
 
 write_issue_page() {
   local out_dir="$1"

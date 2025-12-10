@@ -1,0 +1,34 @@
+#!/bin/bash
+
+reopen() {
+    local iss_id
+    local status_file
+    local sha1_status
+    local tree
+    local sha1_tree
+    local parent
+    local commit_hash
+
+    iss_id=$(iss-id "closed" $1)
+
+    local ref="refs/issues/$iss_id"
+    local path="status"
+
+    status_file=$(mktemp)
+    echo "open" > $status_file
+
+    sha1_status=$(git hash-object -w $status_file)
+
+    tree=$(mktemp)
+    git ls-tree $ref | grep -v "$path$" > $tree
+    echo "100644 blob $sha1_status	$path" >> $tree
+
+    sha1_tree=$(git mktree < $tree)
+    parent=$(git show-ref --verify --hash "$ref")
+
+    commit_hash=$(echo "Issue closed: ($iss_id)" | git commit-tree $sha1_tree -p $parent)
+
+    git update-ref refs/issues/$iss_id $commit_hash
+
+    echo "$iss_id"
+}

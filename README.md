@@ -46,8 +46,12 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
   - Edits a specific message by its numeric position shown in `git issue show` (1-based). Preserves the message id and creates a new commit.
   - If `<ISSUE_ID>` is omitted, lists and prompts for an id; if `<MSG_NUMBER>` is omitted, shows messages and prompts for a number.
   - Message files live under `msgs/` and are named using the issue id plus a short generated suffix (e.g., `<ISSUE_ID>-<gen_id>`).
-- `git issue ls`
-  - Lists all issues (`refs/issues/*`) with their titles. Issue IDs are Git hashes (shortened for display).
+- `git issue ls [open|closed]`
+  - Lists issues (`refs/issues/*`) filtered by status; default shows open issues. Displays short hash and title.
+- `git issue close [<ISSUE_ID>]`
+  - Sets `status` to `closed` and updates the ref. If omitted, prompts to select an open issue.
+- `git issue reopen [<ISSUE_ID>]`
+  - Sets `status` to `open` and updates the ref. If omitted, prompts to select a closed issue.
 - `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
 

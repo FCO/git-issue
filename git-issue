@@ -1,9 +1,13 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
+trap "exit 1" TERM
+
+export top_pid=$$
 
 gen_id() {
 	perl -MTime::HiRes=time -E '
-		my $t = time * 10**5;
-		printf "%d-%04d", $t, rand 10000'
+	my $t = time * 10**5;
+	printf "%d-%04d", $t, rand 10000'
 }
 
 debug() {
@@ -16,7 +20,52 @@ debug-cat() {
 
 die() {
 	echo $@ 1>&2
-	exit 1
+	kill -s TERM $top_pid
+}
+
+has-fzf() {
+	type fzf > /dev/null 2>&1
+}
+
+iss-id() {
+	local ID=$1
+	if [ -z "$1" ]; then
+		if has-fzf; then
+			ID=$(
+				ls | fzf                                       \
+					--layout=reverse-list                  \
+					--accept-nth 1                         \
+					--preview='git issue show-messages {}' \
+					--bind shift-up:preview-page-up,shift-down:preview-page-down
+			) || die "Aborted"
+		else
+			ls >&2
+			echo -en "\nIssue id: " >&2
+			read ID
+		fi
+	fi
+	git log --pretty=format:%H $ID | tail -1 2> /dev/null || echo $ID
+}
+
+show-messages() {
+	local ID=$(git log --pretty=format:%H $1 | tail -1 2> /dev/null || echo $1)
+	local ref="refs/issues/$ID"
+	git ls-tree --name-only "$ref" msgs/ | while read path
+	do
+		local author
+		author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
+		type bat > /dev/null \
+			&& echo -e "\n\n$author:" \
+			&& git show $ref:$path 2> /dev/null | while read line
+			do
+				echo "$line"
+			done | bat -l md -f -p \
+			|| git show $ref:$path 2> /dev/null | while read line
+			do
+				echo "$line"
+			done
+		echo
+	done
 }
 
 path=$(readlink -f $0)

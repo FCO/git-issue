@@ -1,21 +1,15 @@
 #!/bin/bash
 
 show() {
-    local ID=$1
+    local iss_id=$(iss-id $1)
 
-    if [ -z "$ID" ]; then
-	ls
-	echo -en "\nIssue id: "
-	read ID
-    fi
-    local iss_id=$(git log --pretty=format:%H $ID 2> /dev/null || echo $ID)
-
-    local abb=$(git log --pretty=format:%h $ID | tail -1 2> /dev/null || echo $ID)
+    local abb=$(git log --pretty=format:%h $iss_id | tail -1 2> /dev/null || echo $iss_id)
     local ref="refs/issues/$iss_id"
     local title=$(git show $ref:title 2> /dev/null)
     [ -z "$title" ] && die "Not a valid issue id"
     echo -e "$abb - $title\n"
     local index=1
+    echo git ls-tree --name-only "$ref" msgs/
     git ls-tree --name-only "$ref" msgs/ | while read path; do
 	local author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
 	echo -e "\t$index) $author:"

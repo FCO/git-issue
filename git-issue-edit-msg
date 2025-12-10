@@ -1,17 +1,10 @@
 #!/bin/bash
 
 edit-msg() {
-    local ID=$1
-
-    if [ -z "$ID" ]; then
-	ls
-	echo -en "\nIssue id: "
-	read ID
-    fi
-    local iss_id=$(git log --pretty=format:%H $ID 2> /dev/null || echo $ID)
+    local iss_id=$(iss-id $1)
 
     local ref="refs/issues/$iss_id"
-    local $msg_no=-1
+    local msg_no=-1
     if [ -z "$2" ]; then
 	show $iss_id
 	echo "Message number: "

@@ -1,40 +1,42 @@
 #!/bin/bash
 
 reply() {
-    local ID=$1
-
-    if [ -z "$ID" ]; then
-	ls
-	echo -en "\nIssue id: "
-	read ID
-    fi
-    local iss_id=$(git log --pretty=format:%H $ID 2> /dev/null || echo $ID)
+    local sha1_msg
+    local msg_id
+    local msgs_tree
+    local tree
+    local sha1_tree
+    local parent
+    local commit_hash
+    local iss_id=$(iss-id $1)
 
     show $iss_id | less
 
     local message_file=$(mktemp)
     "${EDITOR:=${VISUAL:-vi}}" $message_file
-    local sha1_msg=$(git hash-object -w $message_file)
+    sha1_msg=$(git hash-object -w $message_file)
 
-    local msg_id=$iss_id-$(gen_id)
+    msg_id=$(gen_id)
 
-    local msgs_tree=$(mktemp)
+    msgs_tree=$(mktemp)
+
     local ref="refs/issues/$iss_id"
     git ls-tree $ref msgs/ | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
 
     echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
 
-    local sha1_msgs_tree=$(git mktree < $msgs_tree)
+    local sha1_msgs_tree
+    sha1_msgs_tree=$(git mktree < $msgs_tree)
 
-    local tree=$(mktemp)
-    git ls-tree refs/issues/$iss_id | grep -v "\tmsgs$" > $tree
+    tree=$(mktemp)
+    git ls-tree refs/issues/$iss_id | grep -v "msgs$" > $tree
 
     echo "040000 tree $sha1_msgs_tree	msgs" >> $tree
 
-    local sha1_tree=$(git mktree < $tree)
+    sha1_tree=$(git mktree < $tree)
 
-    local parent=$(git show-ref --verify --hash "$ref")
-    local commit_hash=$(echo "New reply for issue: ($msg_id)" | git commit-tree $sha1_tree -p $parent)
+    parent=$(git show-ref --verify --hash "$ref")
+    commit_hash=$(echo "New reply for issue: ($msg_id)" | git commit-tree $sha1_tree -p $parent)
 
     git update-ref refs/issues/$iss_id $commit_hash
 

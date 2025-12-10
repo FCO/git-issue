@@ -4,10 +4,12 @@ A small set of Git scripts that manage issues directly in Git’s object store, 
 
 ## Concept
 
-- Each issue is a ref: `refs/issues/ISS-<ID>` pointing to a commit whose tree contains:
+- Each issue is a ref: `refs/issues/<ISSUE_ID>` (where `<ISSUE_ID>` is a Git commit hash) pointing to a commit whose tree contains:
   - `title`: blob with the issue title
   - `status`: blob with the issue state (e.g., `open`)
-  - `msgs/`: directory with blobs, each representing a message/reply (`ISS-<id>-<id_msg>`)
+  - `msgs/`: directory with blobs, each representing a message/reply.
+  - First message (created with `new`) is named with a generated short id (e.g., `<gen_id>`).
+  - Subsequent messages (via `reply`) are named `<ISSUE_ID>-<gen_id>`.
 - Operations (`new`/`reply`/`edit`) assemble trees with `git mktree` and create commits with `git commit-tree`, then update the ref via `git update-ref`.
 
 ## Requirements
@@ -29,18 +31,23 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
 
 - `git issue new "Issue title"`
   - Creates a new issue. Opens the editor for the first message.
-  - Updates `refs/issues/ISS-<ID>` with a root commit (no parent) containing `title`, `status`, and `msgs/<msg_id>`.
-- `git issue show ISS-<ID>`
+  - Updates `refs/issues/<ISSUE_ID>` with a root commit (no parent) containing `title`, `status`, and `msgs/<msg_id>`.
+- `git issue show [<ISSUE_ID>]`
+  - If omitted, lists issues and prompts for an id.
   - Shows the title and lists all messages (`msgs/*`), indicating the author of the commit that includes each message.
-- `git issue reply ISS-<ID>`
+- `git issue reply [<ISSUE_ID>]`
+  - If omitted, lists issues and prompts for an id.
   - Adds a message to the issue. Opens the editor for the content.
-  - Creates a commit with a parent pointing to the current tip of `refs/issues/ISS-<ID>` and updates the ref.
-- `git issue edit-title ISS-<ID>`
+  - Creates a commit with a parent pointing to the current tip of `refs/issues/<ISSUE_ID>` and updates the ref.
+- `git issue edit-title [<ISSUE_ID>]`
+  - If omitted, lists issues and prompts for an id.
   - Edits the issue title, creating a new commit (with parent) and updating the ref.
-- `git issue edit-msg <MSG_ID>`
-  - Edits the content of a specific message, preserving its id and creating a new commit.
+- `git issue edit-msg [<ISSUE_ID>] [<MSG_NUMBER>]`
+  - Edits a specific message by its numeric position shown in `git issue show` (1-based). Preserves the message id and creates a new commit.
+  - If `<ISSUE_ID>` is omitted, lists and prompts for an id; if `<MSG_NUMBER>` is omitted, shows messages and prompts for a number.
+  - Message files live under `msgs/` and are named using the issue id plus a short generated suffix (e.g., `<ISSUE_ID>-<gen_id>`).
 - `git issue ls`
-  - Lists all issues (`refs/issues/*`) with their titles.
+  - Lists all issues (`refs/issues/*`) with their titles. Issue IDs are Git hashes (shortened for display).
 - `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
 
@@ -84,7 +91,7 @@ No React/Vite is required for the static site.
 
 - “Failed to fetch” / rate limit: authenticate and/or wait for `X-RateLimit-Reset`; check headers: `X-RateLimit-*`.
 - “non-fast-forward” on push: run `./git-issue pull` and re-apply your reply/edit; verify commit parent:
-  - `git log --pretty='%H %P' -n 1 $(git rev-parse refs/issues/ISS-<ID>)`
+  - `git log --pretty='%H %P' -n 1 $(git rev-parse refs/issues/<ISSUE_ID>)`
 - Empty editor: set `$EDITOR` or `$VISUAL`; default is `vi`.
 
 ## License

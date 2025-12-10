@@ -16,6 +16,7 @@ A small set of Git scripts that manage issues directly in Git’s object store, 
 
 - Git installed and configured (`user.name` and `user.email`).
 - `$EDITOR` (or `$VISUAL`) set; if not, scripts fall back to `vi`.
+- Optional: `fzf` for interactive selection and preview, `bat` for nicer message previews (if installed, scripts will use them automatically).
 
 ## Installation
 
@@ -29,31 +30,47 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
 
 ## Available scripts
 
+### Examples
+
 - `git issue new "Issue title"`
   - Creates a new issue. Opens the editor for the first message.
   - Updates `refs/issues/<ISSUE_ID>` with a root commit (no parent) containing `title`, `status`, and `msgs/<msg_id>`.
+  - Example: `ISSUE_ID=$(git issue new "Login fails on Safari" | tail -1)`
 - `git issue show [<ISSUE_ID>]`
   - If omitted, lists issues and prompts for an id.
   - Shows the title and lists all messages (`msgs/*`), indicating the author of the commit that includes each message.
+  - Example: `git issue show "$ISSUE_ID"`
 - `git issue reply [<ISSUE_ID>]`
   - If omitted, lists issues and prompts for an id.
   - Adds a message to the issue. Opens the editor for the content.
   - Creates a commit with a parent pointing to the current tip of `refs/issues/<ISSUE_ID>` and updates the ref.
+  - Example: `git issue reply "$ISSUE_ID"`
 - `git issue edit-title [<ISSUE_ID>]`
   - If omitted, lists issues and prompts for an id.
   - Edits the issue title, creating a new commit (with parent) and updating the ref.
+  - Example: `git issue edit-title "$ISSUE_ID"`
 - `git issue edit-msg [<ISSUE_ID>] [<MSG_NUMBER>]`
   - Edits a specific message by its numeric position shown in `git issue show` (1-based). Preserves the message id and creates a new commit.
   - If `<ISSUE_ID>` is omitted, lists and prompts for an id; if `<MSG_NUMBER>` is omitted, shows messages and prompts for a number.
   - Message files live under `msgs/` and are named using the issue id plus a short generated suffix (e.g., `<ISSUE_ID>-<gen_id>`).
+  - Example: `git issue edit-msg "$ISSUE_ID" 2` (edit the second message)
 - `git issue ls [open|closed]`
   - Lists issues (`refs/issues/*`) filtered by status; default shows open issues. Displays short hash and title.
+  - Examples:
+    - `git issue ls` (open)
+    - `git issue ls closed`
 - `git issue close [<ISSUE_ID>]`
   - Sets `status` to `closed` and updates the ref. If omitted, prompts to select an open issue.
+  - Example: `git issue close "$ISSUE_ID"`
 - `git issue reopen [<ISSUE_ID>]`
   - Sets `status` to `open` and updates the ref. If omitted, prompts to select a closed issue.
+  - Example: `git issue reopen "$ISSUE_ID"`
 - `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
+  - Examples:
+    - `git issue pull`
+    - `git issue push`
+    - `git issue sync`
 
 ## Recommended workflow
 

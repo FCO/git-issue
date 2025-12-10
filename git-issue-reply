@@ -8,7 +8,7 @@ reply() {
     local sha1_tree
     local parent
     local commit_hash
-    local iss_id=$(iss-id $1)
+    local iss_id=$(iss-id "open" $1)
 
     show $iss_id | less
 

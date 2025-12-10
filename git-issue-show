@@ -1,7 +1,7 @@
 #!/bin/bash
 
 show() {
-    local iss_id=$(iss-id $1)
+    local iss_id=$(iss-id "open" $1)
 
     local abb=$(git log --pretty=format:%h $iss_id | tail -1 2> /dev/null || echo $iss_id)
     local ref="refs/issues/$iss_id"

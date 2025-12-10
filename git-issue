@@ -28,11 +28,12 @@ has-fzf() {
 }
 
 iss-id() {
-	local ID=$1
-	if [ -z "$1" ]; then
+	local status=$1
+	local ID=$2
+	if [ -z "$2" ]; then
 		if has-fzf; then
 			ID=$(
-				ls | fzf                                       \
+				ls $status | fzf                               \
 					--layout=reverse-list                  \
 					--accept-nth 1                         \
 					--preview='git issue show-messages {}' \
@@ -57,13 +58,9 @@ show-messages() {
 		type bat > /dev/null \
 			&& echo -e "\n\n$author:" \
 			&& git show $ref:$path 2> /dev/null | while read line
-			do
-				echo "$line"
-			done | bat -l md -f -p \
+				do echo "$line"; done | bat -l md -f -p \
 			|| git show $ref:$path 2> /dev/null | while read line
-			do
-				echo "$line"
-			done
+				do echo "$line"; done
 		echo
 	done
 }
@@ -79,5 +76,7 @@ source "$(dirname $path)/git-issue-push"
 source "$(dirname $path)/git-issue-reply"
 source "$(dirname $path)/git-issue-show"
 source "$(dirname $path)/git-issue-sync"
+source "$(dirname $path)/git-issue-close"
+source "$(dirname $path)/git-issue-reopen"
 
-$1 ${@:2}
+[ -z $1 ] && iss-id || $1 ${@:2}

@@ -2,6 +2,16 @@
 
 new() {
     local title="$@"
+    local sha1_title
+    local sha1_status
+    local message_file
+    local msg_id
+    local sha1_msg
+    local msgs_tree
+    local sha1_msgs_tree
+    local tree
+    local sha1_tree
+    local commit_hash
 
     if [ -z "$title" ]; then
 	echo -n "Issue title: "
@@ -9,36 +19,35 @@ new() {
     fi
 
     debug "title: $title"
-    local sha1_title=$(printf %s "$title" | git hash-object -w --stdin)
+    sha1_title=$(printf %s "$title" | git hash-object -w --stdin)
     debug "sha1_title: $sha1_title"
 
-    local sha1_status=$(git hash-object -w <(echo "open"))
+    sha1_status=$(git hash-object -w <(echo "open"))
     debug "sha1_status: $sha1_status"
 
-    local message_file=$(mktemp)
+    message_file=$(mktemp)
     "${EDITOR:=${VISUAL:-vi}}" $message_file
     debug-cat $message_file
 
-    local msg_id=$(gen_id)
-    local sha1_msg=$(git hash-object -w $message_file)
+    msg_id=$(gen_id)
+    sha1_msg=$(git hash-object -w $message_file)
 
-    local msgs_tree=$(mktemp)
+    msgs_tree=$(mktemp)
 
     echo "100644 blob $sha1_msg	$msg_id" > $msgs_tree
     debug-cat $msgs_tree
 
-    local sha1_msgs_tree=$(git mktree < $msgs_tree)
+    sha1_msgs_tree=$(git mktree < $msgs_tree)
 
-    local tree=$(mktemp)
-
+    tree=$(mktemp)
     echo "100644 blob $sha1_title	title"   > $tree
     echo "100644 blob $sha1_status	status" >> $tree
     echo "040000 tree $sha1_msgs_tree	msgs"   >> $tree
     debug-cat $tree
 
-    local sha1_tree=$(git mktree < $tree)
+    sha1_tree=$(git mktree < $tree)
 
-    local commit_hash=$(echo "Issue created: $title ($msg_id)" | git commit-tree $sha1_tree)
+    commit_hash=$(echo "Issue created: $title ($msg_id)" | git commit-tree $sha1_tree)
 
     git update-ref refs/issues/$commit_hash $commit_hash
 

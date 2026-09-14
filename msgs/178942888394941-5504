@@ -1,0 +1,6 @@
+It should exist a numeric priority attribute,
+issues should have the option to be ordered by
+create date (as default) or by priority and it
+should be possible to filter issued based on
+priority, for example if the priority is higher
+then 90 or lower than 20.

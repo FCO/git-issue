@@ -14,7 +14,7 @@ closed_id=$(git issue new "Closed Issue" | tail -1)
 # close second issue
 git issue close "$closed_id" > /dev/null
 
-out_open=$(git issue ls open | tr -d '\r')
+out_open=$(git issue ls open | tr -d '\r' || true)
 out_closed=$(git issue ls closed | tr -d '\r' || true)
 
 # open list contains open issue title, not closed

@@ -12,16 +12,27 @@ export EDITOR=true; export VISUAL=true
 id1=$(git issue new "Web Test" | tail -1)
 reply_id=$(git issue reply "$id1" | tail -1)
 
-"$PROJECT_DIR/git-issue-generate-page" > /dev/null
+# Run the generator from inside the temp repo so it writes to $REPO/docs
+# instead of clobbering the project's tracked docs/ directory.
+cp "$PROJECT_DIR/git-issue-generate-page" "$REPO/git-issue-generate-page"
+"$REPO/git-issue-generate-page" > /dev/null
 
-tap_assert "test -f \"$PROJECT_DIR/docs/index.html\"" "index.html exists in docs"
+tap_assert "test -f \"$REPO/docs/index.html\"" "index.html exists in docs"
 abb=$(git -C "$REPO" log --pretty=format:%h "$id1" | tail -1)
-tap_assert "test -f \"$PROJECT_DIR/docs/issues/$abb.html\"" "issue page exists"
+tap_assert "test -f \"$REPO/docs/issues/$abb.html\"" "issue page exists"
 
-index_html=$(cat "$PROJECT_DIR/docs/index.html")
-issue_html=$(cat "$PROJECT_DIR/docs/issues/$abb.html")
-tap_assert "echo \"$index_html\" | grep -F 'Issues'" "index has title"
-tap_assert "echo \"$issue_html\" | grep -F 'Opened by'" "issue page shows opener"
-tap_assert "echo \"$issue_html\" | grep -F 'Messages'" "issue page shows messages section"
+index_page="$REPO/docs/index.html"
+issue_page="$REPO/docs/issues/$abb.html"
+
+tap_assert "grep -F 'Issues' \"$index_page\"" "index has title"
+tap_assert "grep -F 'Opened by' \"$issue_page\"" "issue page shows opener"
+tap_assert "grep -F 'Messages' \"$issue_page\"" "issue page shows messages section"
+
+# Regression: interpolated values must not be wrapped in doubled quotes.
+tap_assert "grep -F '<h1>Web Test</h1>' \"$issue_page\"" "h1 title has no surrounding quotes"
+tap_assert "grep -F '<span class=\"status\">open</span>' \"$issue_page\"" "status has no surrounding quotes"
+tap_assert "grep -F '<strong>tester</strong>' \"$issue_page\"" "opener has no surrounding quotes"
+tap_assert "! grep -F '\"\"' \"$issue_page\"" "no doubled quotes in issue page"
+tap_assert "! grep -F '\"\"' \"$index_page\"" "no doubled quotes in index page"
 
 tap_done

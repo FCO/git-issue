@@ -16,7 +16,9 @@ edit-msg() {
 
     local path=$(git ls-tree --name-only "$ref" msgs/ | while read path; do
 	msg_no=$(( $msg_no - 1 ))
-	[ "$msg_no" -eq 0 ] && echo $path
+	if [ "$msg_no" -eq 0 ]; then
+		echo $path
+	fi
     done)
 
     [ -z "$path" ] && die "Message number invalid"

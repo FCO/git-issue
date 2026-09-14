@@ -1,5 +1,5 @@
 sync() {
-	pull
-	push
-	pull
+	pull "$@"
+	push "$@"
+	pull "$@"
 }

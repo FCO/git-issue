@@ -11,11 +11,15 @@ gen_id() {
 }
 
 debug() {
-	[ "0$DEBUG" -gt 0 ] && echo $@ >&2
+	if [ "0$DEBUG" -gt 0 ]; then
+		echo "$@" >&2
+	fi
 }
 
 debug-cat() {
-	[ "0$DEBUG" -gt 0 ] && cat $@ >&2
+	if [ "0$DEBUG" -gt 0 ]; then
+		cat "$@" >&2
+	fi
 }
 
 die() {
@@ -33,14 +37,14 @@ iss-id() {
 	if [ -z "$2" ]; then
 		if has-fzf; then
 			ID=$(
-				ls $status | fzf                               \
+				git issue ls $status | fzf                   \
 					--layout=reverse-list                  \
 					--accept-nth 1                         \
 					--preview='git issue show-messages {}' \
 					--bind shift-up:preview-page-up,shift-down:preview-page-down
 			) || die "Aborted"
 		else
-			ls >&2
+			git issue ls $status >&2
 			echo -en "\nIssue id: " >&2
 			read ID
 		fi
@@ -78,5 +82,7 @@ source "$(dirname $path)/git-issue-show"
 source "$(dirname $path)/git-issue-sync"
 source "$(dirname $path)/git-issue-close"
 source "$(dirname $path)/git-issue-reopen"
+source "$(dirname $path)/git-issue-fetch"
 
+set -o noglob
 [ -z $1 ] && iss-id || $1 ${@:2}

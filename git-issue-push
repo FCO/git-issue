@@ -1,3 +1,32 @@
 push() {
-	git push origin 'refs/issues/*:refs/issues/*'
+	local repo=${1:-origin}
+	local issue=${2:-*}
+	local times=${3:-1}
+	local ref="refs/issues/$issue"
+
+	# A wildcard (or specific) ref pattern that matches no local refs is a
+	# successful no-op. Without this guard, `git push origin "refs/issues/*:…"`
+	# on an empty repo fails with "No refs in common and none specified".
+	if [ -z "$(git for-each-ref --format='%(refname)' "$ref")" ]; then
+		return 0
+	fi
+
+	local output
+	output=$(git push "$repo" "$ref:$ref" 2>&1)
+	local rc=$?
+	echo "$output" >&2
+
+	local rejected
+	rejected=$(echo "$output" | perl -nalE 'say $1 if m{^\s*!\s+\[(?:remote )?rejected\]\s+refs/issues/(\S+)}' | sort -u)
+
+	if [ -n "$rejected" ] && [ "$times" -le 5 ]; then
+		local hash
+		for hash in $rejected; do
+			git issue pull "$repo" "$hash"
+		done
+		git issue push "$repo" "$issue" $(( times + 1 ))
+		return $?
+	fi
+
+	return $rc
 }

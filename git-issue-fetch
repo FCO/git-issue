@@ -1,0 +1,10 @@
+fetch() {
+	local repo=${1:-origin}
+	local issue="${2:-*}"
+	local remote_ref="+refs/issues/$issue"
+	local local_ref="refs/remote-issues/$issue"
+
+	# --prune drops stale refs/remote-issues/* refs whose source issue was
+	# deleted on the remote, so a subsequent pull does not resurrect them.
+	git fetch --prune --atomic "$repo" "$remote_ref:$local_ref"
+}

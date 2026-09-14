@@ -9,14 +9,13 @@ show() {
     [ -z "$title" ] && die "Not a valid issue id"
     echo -e "$abb - $title\n"
     local index=1
-    echo git ls-tree --name-only "$ref" msgs/
     git ls-tree --name-only "$ref" msgs/ | while read path; do
-	local author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
-	echo -e "\t$index) $author:"
-	git show $ref:$path | while read line; do
-	    echo -e "\t\t$line"
-	done
-	index=$(($index + 1))
-	echo
+        local author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
+        echo -e "\t$index) $author:"
+        git show $ref:$path | while read line; do
+            echo -e "\t\t$line"
+        done
+        index=$(($index + 1))
+        echo
     done
 }

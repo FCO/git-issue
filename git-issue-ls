@@ -9,6 +9,9 @@ ls() {
 		local title=$(git show $ref:title)
 		local curr_status
 		curr_status="$(git show $ref:status)"
-		[ -z "$status" ] || [ "$curr_status" = "$status" ] && printf "%s - %s\n" $ID "$title"
+		if [ -z "$status" ] || [ "$curr_status" = "$status" ]; then
+			printf "%s - %s\n" $ID "$title"
+		fi
 	done
+	return 0
 }

@@ -10,6 +10,9 @@ reply() {
     local commit_hash
     local iss_id=$(iss-id "open" $1)
 
+    local ref="refs/issues/$iss_id"
+    git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
+
     show $iss_id | less
 
     local message_file=$(mktemp)
@@ -20,7 +23,6 @@ reply() {
 
     msgs_tree=$(mktemp)
 
-    local ref="refs/issues/$iss_id"
     git ls-tree $ref msgs/ | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
 
     echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree

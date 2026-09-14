@@ -1,3 +1,50 @@
 pull() {
-	git fetch origin 'refs/issues/*:refs/issues/*'
+	local repo=${1:-origin}
+	local issue="${2:-*}"
+
+	git issue fetch "$repo" "$issue"
+	git for-each-ref "refs/remote-issues/$issue" | while read sha type ref; do
+		local id=$(basename $ref)
+
+		local src="refs/remote-issues/$id"
+		local onto="refs/issues/$id"
+
+		local src_sha
+		src_sha=$(git rev-parse --verify "$src" 2>/dev/null) || continue
+		local onto_sha
+		onto_sha=$(git rev-parse --verify "$onto" 2>/dev/null) || true
+
+		if [ -z "$onto_sha" ]; then
+			git update-ref "$onto" "$src_sha"
+			continue
+		fi
+
+		local base
+		base=$(git merge-base "$src_sha" "$onto_sha" 2>/dev/null) || true
+
+		if [ "$base" = "$onto_sha" ]; then
+			git update-ref "$onto" "$src_sha"
+			continue
+		fi
+
+		if [ -z "$base" ] || [ "$base" = "$src_sha" ]; then
+			continue
+		fi
+
+		local merge_out merge_rc tree
+		merge_out=$(git merge-tree --write-tree "$onto_sha" "$src_sha" 2>/dev/null)
+		merge_rc=$?
+		tree=$(echo "$merge_out" | head -1)
+
+		if [ "$merge_rc" -ne 0 ]; then
+			echo "git-issue: conflict merging issue $id (local and remote diverged) — left local copy unchanged" >&2
+			echo "$merge_out" | grep -E '^(CONFLICT|Auto-merging)' >&2 || true
+			continue
+		fi
+
+		local new_commit
+		new_commit=$(git commit-tree "$tree" -p "$onto_sha" -p "$src_sha" -m "Merge issue $id")
+
+		git update-ref "$onto" "$new_commit"
+	done
 }

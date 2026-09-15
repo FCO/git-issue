@@ -16,6 +16,10 @@ _git-issue() {
         'edit-title:Edit an issue title'
         'edit-msg:Edit a message'
         'status:Set an arbitrary status'
+        'priority:Set an issue priority'
+        'tag:Add tags to an issue'
+        'untag:Remove tags from an issue'
+        'config:List, get, or set configuration'
         'close:Close an issue'
         'reopen:Reopen an issue'
         'pull:Pull issue refs'
@@ -36,13 +40,13 @@ _git-issue() {
             _values 'flag' '--all' '--open' '--closed'
             _describe 'issue id' ids
             ;;
-        reply|edit-title|edit-msg|close|reopen|status)
+        reply|edit-title|edit-msg|close|reopen|status|priority|tag|untag)
             local -a ids
             ids=(${(f)"$(git for-each-ref --format='%(refname)' refs/issues/ 2>/dev/null | sed 's#^refs/issues/##')"})
             _describe 'issue id' ids
             ;;
         ls)
-            _values 'flag' '--all' '--open' '--closed' '--porcelain'
+            _values 'flag' '--all' '--open' '--closed' '--porcelain' '--sort' '--priority-gt' '--priority-lt' '--priority' '--tag'
             ;;
         new)
             _values 'flag' '-m' '--message'

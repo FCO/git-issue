@@ -7,6 +7,7 @@ ls() {
 	local prio_gt=""
 	local prio_lt=""
 	local prio_eq=""
+	local tag_filter=""
 
 	while [ $# -gt 0 ]; do
 		case "$1" in
@@ -26,6 +27,9 @@ ls() {
 			--priority)
 				[ $# -ge 2 ] || { echo "git-issue: option '--priority' requires an argument" >&2; return 2; }
 				prio_eq="$2"; shift 2 ;;
+			--tag)
+				[ $# -ge 2 ] || { echo "git-issue: option '--tag' requires an argument" >&2; return 2; }
+				tag_filter="$2"; shift 2 ;;
 			-*) echo "git-issue: unknown option: $1" >&2; return 2 ;;
 			*) status="$1"; shift ;;
 		esac
@@ -62,7 +66,7 @@ ls() {
 	fi | while read key ref; do
 		[ -z "$ref" ] && continue
 		local id="${ref##*/}"
-		local title curr_status prio
+		local title curr_status prio tags
 		title=$(git show "$ref:title" 2>/dev/null)
 		curr_status=$(git show "$ref:status" 2>/dev/null)
 		prio=$(git show "$ref:priority" 2>/dev/null || echo 0)
@@ -78,6 +82,12 @@ ls() {
 		fi
 		if [ -n "$prio_eq" ] && [ "$prio" != "$prio_eq" ]; then
 			continue
+		fi
+		if [ -n "$tag_filter" ]; then
+			tags=$(git show "$ref:tags" 2>/dev/null)
+			if ! printf '%s\n' "$tags" | grep -Fxq "$tag_filter"; then
+				continue
+			fi
 		fi
 
 		if [ "$porcelain" -eq 1 ]; then

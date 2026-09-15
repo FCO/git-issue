@@ -56,18 +56,20 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
   - If `<ISSUE_ID>` is omitted, lists and prompts for an id; if `<MSG_NUMBER>` is omitted, shows messages and prompts for a number.
   - Message files live under `msgs/` and are named with a generated id (e.g., `<gen_id>`); message ids are preserved across edits.
   - Example: `git issue edit-msg "$ISSUE_ID" 2` (edit the second message)
-- `git issue ls [<status>|--all|--open|--closed] [--porcelain] [--sort date|priority] [--priority-gt N] [--priority-lt N] [--priority N]`
+- `git issue ls [<status>|--all|--open|--closed] [--porcelain] [--sort date|priority] [--priority-gt N] [--priority-lt N] [--priority N] [--tag T]`
   - Lists issues (`refs/issues/*`) filtered by status; default shows open issues. Displays short hash and title.
   - `--all` shows every status; `--open`/`--closed` filter to those values; any other positional `<status>` string filters to that exact value.
   - `--porcelain` emits machine-readable `<full-hash>|<status>|<title>` lines.
   - `--sort date` (default) orders by creation date; `--sort priority` orders by priority (numeric, highest first). The `sort` config key (`git issue config sort priority`) sets the default sort when `--sort` is not passed.
   - `--priority-gt N` / `--priority-lt N` / `--priority N` filter by numeric priority (greater than / less than / exact). Filters combine with the status filter.
+  - `--tag T` filters to issues whose tags contain `T` (can be combined with status/priority filters).
   - Examples:
     - `git issue ls` (open)
     - `git issue ls closed`
     - `git issue ls --all`
     - `git issue ls --sort priority`
     - `git issue ls --priority-gt 50`
+    - `git issue ls --tag bug`
 - `git issue close [-f|--force] [<ISSUE_ID>]`
   - Sets `status` to `closed` and updates the ref. If omitted, prompts to select an open issue. Prompts for confirmation unless `-f`/`--force` is given.
   - Example: `git issue close "$ISSUE_ID"`
@@ -80,6 +82,11 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
 - `git issue priority <ISSUE_ID> <number>`
   - Sets the issue's numeric `priority` blob (default `0`). Used by `ls --sort priority` and the `--priority-*` filters. The number must be numeric.
   - Example: `git issue priority "$ISSUE_ID" 50`
+- `git issue tag <ISSUE_ID> <tag> [<tag>...]` / `git issue untag <ISSUE_ID> <tag> [<tag>...]`
+  - Adds or removes tag(s) on an issue. Tags are stored one per line in the `tags` blob (empty by default); `tag` deduplicates, and both preserve the rest of the issue tree.
+  - Examples:
+    - `git issue tag "$ISSUE_ID" bug urgent`
+    - `git issue untag "$ISSUE_ID" urgent`
 - `git issue config [<KEY> [<VALUE>]]`
   - Manages repository-level configuration, stored in the `refs/issue-config` ref (one blob per key). With no arguments, lists all keys as `key = value` (sorted). With `<KEY>` only, prints that key's value (nothing if unset). With `<KEY> <VALUE>`, sets/updates the key. Use `config --unset <KEY>` to remove a key.
   - Examples:

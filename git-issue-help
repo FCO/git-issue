@@ -21,6 +21,8 @@ Commands:
   edit-msg [<id>] [<n>]          Edit message number <n> (1-based) of an issue.
   status <id> <status>           Set an arbitrary status string.
   priority <id> <number>         Set an issue's numeric priority (default 0).
+  tag <id> <tag> [<tag>...]      Add tag(s) to an issue (deduplicated).
+  untag <id> <tag> [<tag>...]    Remove tag(s) from an issue.
   config [<key> [<value>]]       List, get, or set configuration (stored in
                                  refs/issue-config). Use `--unset <key>` to
                                  remove a key.

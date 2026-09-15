@@ -107,6 +107,7 @@ source "$(dirname $path)/git-issue-config"
 source "$(dirname $path)/git-issue-ls"
 source "$(dirname $path)/git-issue-new"
 source "$(dirname $path)/git-issue-priority"
+source "$(dirname $path)/git-issue-tag"
 source "$(dirname $path)/git-issue-pull"
 source "$(dirname $path)/git-issue-push"
 source "$(dirname $path)/git-issue-reply"
@@ -127,7 +128,7 @@ case "$cmd" in
 		help
 		exit 0
 		;;
-	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|priority|config|pull|push|fetch|sync|show-messages)
+	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|priority|tag|untag|config|pull|push|fetch|sync|show-messages)
 		"$cmd" "${@:2}"
 		;;
 	*)

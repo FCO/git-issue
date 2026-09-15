@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Replace the `tags` blob of an issue with the contents of a file, creating a
+# new commit on the issue ref (preserving all other blobs and msgs/).
+_issue_set_tags() {
+	local iss_id="$1"
+	local tags_file="$2"
+	local ref="refs/issues/$iss_id"
+	local path="tags"
+
+	local sha1_tags tree sha1_tree parent commit_hash
+	sha1_tags=$(git hash-object -w "$tags_file")
+
+	tree=$(mktemp)
+	git ls-tree "$ref" | awk -F'\t' -v p="$path" '$2 != p' > "$tree"
+	echo "100644 blob $sha1_tags	$path" >> "$tree"
+
+	sha1_tree=$(git mktree < "$tree")
+	parent=$(git show-ref --verify --hash "$ref")
+	commit_hash=$(echo "Issue tags updated ($iss_id)" | git commit-tree "$sha1_tree" -p "$parent")
+
+	git update-ref "$ref" "$commit_hash"
+}
+
+tag() {
+	local iss_id
+	iss_id=$(iss-id "--all" "$1")
+
+	local ref="refs/issues/$iss_id"
+	git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
+
+	shift
+	[ $# -eq 0 ] && die "Tag not specified"
+
+	local tags_file
+	tags_file=$(mktemp)
+	git show "$ref:tags" > "$tags_file" 2>/dev/null || true
+
+	local t
+	for t in "$@"; do
+		if ! grep -Fxq "$t" "$tags_file"; then
+			printf '%s\n' "$t" >> "$tags_file"
+		fi
+	done
+
+	_issue_set_tags "$iss_id" "$tags_file"
+	echo "$iss_id"
+}
+
+untag() {
+	local iss_id
+	iss_id=$(iss-id "--all" "$1")
+
+	local ref="refs/issues/$iss_id"
+	git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
+
+	shift
+	[ $# -eq 0 ] && die "Tag not specified"
+
+	local tags_file
+	tags_file=$(mktemp)
+	git show "$ref:tags" > "$tags_file" 2>/dev/null || true
+
+	local t
+	for t in "$@"; do
+		grep -Fvx "$t" "$tags_file" > "$tags_file.tmp" 2>/dev/null || true
+		mv "$tags_file.tmp" "$tags_file"
+	done
+
+	_issue_set_tags "$iss_id" "$tags_file"
+	echo "$iss_id"
+}

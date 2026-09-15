@@ -27,6 +27,12 @@ show() {
     if [ -n "$priority" ] && [ "$priority" != "0" ]; then
         printf 'Priority: %s\n' "$priority"
     fi
+
+    local tags
+    tags=$(git show "$ref:tags" 2>/dev/null)
+    if [ -n "$tags" ]; then
+        printf 'Tags: %s\n' "$(printf '%s\n' "$tags" | awk 'NR>1{printf ", "} {printf "%s", $0} END{print ""}')"
+    fi
     echo
     local index=1 path author
     while read -r path; do

@@ -7,7 +7,7 @@
 _git_issue_complete() {
     local cur
     cur="${COMP_WORDS[COMP_CWORD]}"
-    local subcommands="help new reply show ls edit-title edit-msg status close reopen pull push fetch sync"
+    local subcommands="help new reply show ls edit-title edit-msg status close reopen priority tag untag config pull push fetch sync"
 
     if [ "$COMP_CWORD" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$subcommands" -- "$cur") )
@@ -20,7 +20,7 @@ _git_issue_complete() {
             ids=$(git for-each-ref --format='%(refname)' refs/issues/ 2>/dev/null | sed 's#^refs/issues/##')
             COMPREPLY=( $(compgen -W "--all --open --closed $ids" -- "$cur") )
             ;;
-        reply|edit-title|edit-msg|status)
+        reply|edit-title|edit-msg|status|priority|tag|untag)
             local ids
             ids=$(git for-each-ref --format='%(refname)' refs/issues/ 2>/dev/null | sed 's#^refs/issues/##')
             COMPREPLY=( $(compgen -W "$ids" -- "$cur") )
@@ -31,7 +31,7 @@ _git_issue_complete() {
             COMPREPLY=( $(compgen -W "-f --force $ids" -- "$cur") )
             ;;
         ls)
-            COMPREPLY=( $(compgen -W "--all --open --closed --porcelain" -- "$cur") )
+            COMPREPLY=( $(compgen -W "--all --open --closed --porcelain --sort --priority-gt --priority-lt --priority --tag" -- "$cur") )
             ;;
         new)
             COMPREPLY=( $(compgen -W "-m --message" -- "$cur") )

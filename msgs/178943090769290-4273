@@ -1,0 +1,1 @@
+Added t/test_default_origin.t verifying origin is the default remote for pull/push/fetch/sync.

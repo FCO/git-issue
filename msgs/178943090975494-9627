@@ -1,0 +1,1 @@
+Changed the fzf preview to use {1} so show-messages receives the hash instead of the full line.

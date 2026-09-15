@@ -1,0 +1,1 @@
+Added a tty-aware pager honoring $PAGER and stopped show/show-messages from dropping a final line without a trailing newline.

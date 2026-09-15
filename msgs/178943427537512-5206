@@ -1,0 +1,1 @@
+git issue ls now shows non-default priority ([P:N]) and tags, and --porcelain appends the priority as a trailing field.

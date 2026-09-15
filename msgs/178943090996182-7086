@@ -1,0 +1,1 @@
+Added early ref validation, numeric message-number guards, and -m argument checks for clean failures.

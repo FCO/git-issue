@@ -34,6 +34,8 @@ edit-msg() {
     git show "$ref:msgs/$msg_id" > "$message_file" 2>/dev/null
 
     "${EDITOR:=${VISUAL:-vi}}" "$message_file"
+    echo "DEBUG edit-msg EDITOR=[$EDITOR] content after editor:" >&2
+    cat "$message_file" >&2
     local sha1_msg=$(git hash-object -w "$message_file")
 
     local msgs_tree=$(mktemp)

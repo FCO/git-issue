@@ -1,0 +1,1 @@
+Filtered ls no longer returns non-zero when the last-sorted issue does not match the status filter.

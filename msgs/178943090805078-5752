@@ -1,0 +1,1 @@
+Replaced broken escaped-quote printf in git-issue-generate-page that emitted doubled quotes around titles/authors.

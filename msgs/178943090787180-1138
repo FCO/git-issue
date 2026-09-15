@@ -1,0 +1,1 @@
+Added t/test_command_coverage.t filling gaps for edit-title content, edit-msg selection, show body, fetch sha, and generate-page fields.

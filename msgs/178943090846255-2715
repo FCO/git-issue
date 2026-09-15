@@ -1,0 +1,1 @@
+Suppressed raw git noise and added concise push/pull/fetch/sync summaries (raw output behind DEBUG=1).

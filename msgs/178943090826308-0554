@@ -1,0 +1,1 @@
+Added git-issue-help and a whitelist dispatcher; bare `git issue` and unknown commands now print help/error and exit cleanly.

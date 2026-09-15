@@ -14,10 +14,13 @@ Commands:
   reply [<id>]                   Add a message to an issue.
   ls [<status>]                  List issues (default: open). Accepts --all,
                                  --open, --closed, --porcelain, or a positional
-                                 <status> string (any status value).
+                                 <status> string (any status value). Also
+                                 accepts --sort date|priority, --priority-gt N,
+                                 --priority-lt N, --priority N, and --tag T.
   edit-title [<id>]              Edit an issue's title.
   edit-msg [<id>] [<n>]          Edit message number <n> (1-based) of an issue.
   status <id> <status>           Set an arbitrary status string.
+  priority <id> <number>         Set an issue's numeric priority (default 0).
   config [<key> [<value>]]       List, get, or set configuration (stored in
                                  refs/issue-config). Use `--unset <key>` to
                                  remove a key.

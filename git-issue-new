@@ -22,6 +22,7 @@ new() {
 
     local sha1_title
     local sha1_status
+    local sha1_priority
     local message_file
     local msg_id
     local sha1_msg
@@ -44,6 +45,9 @@ new() {
     sha1_status=$(git hash-object -w <(echo "open"))
     debug "sha1_status: $sha1_status"
 
+    sha1_priority=$(git hash-object -w <(echo "0"))
+    debug "sha1_priority: $sha1_priority"
+
     message_file=$(mktemp)
     if [ "$have_message" -eq 1 ]; then
 	printf '%s\n' "$message" > "$message_file"
@@ -65,6 +69,7 @@ new() {
     tree=$(mktemp)
     echo "100644 blob $sha1_title	title"   > $tree
     echo "100644 blob $sha1_status	status" >> $tree
+    echo "100644 blob $sha1_priority	priority" >> $tree
     echo "040000 tree $sha1_msgs_tree	msgs"   >> $tree
     debug-cat $tree
 

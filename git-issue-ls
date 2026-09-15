@@ -3,31 +3,90 @@
 ls() {
 	local status="open"
 	local porcelain=0
-	local arg
-	for arg in "$@"; do
-		case "$arg" in
-			--all) status="" ;;
-			--open) status="open" ;;
-			--closed) status="closed" ;;
-			--porcelain) porcelain=1 ;;
-			-*) echo "git-issue: unknown option: $arg" >&2; return 2 ;;
-			*) status="$arg" ;;
+	local sort_mode=""
+	local prio_gt=""
+	local prio_lt=""
+	local prio_eq=""
+
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--all) status=""; shift ;;
+			--open) status="open"; shift ;;
+			--closed) status="closed"; shift ;;
+			--porcelain) porcelain=1; shift ;;
+			--sort)
+				[ $# -ge 2 ] || { echo "git-issue: option '--sort' requires an argument" >&2; return 2; }
+				sort_mode="$2"; shift 2 ;;
+			--priority-gt)
+				[ $# -ge 2 ] || { echo "git-issue: option '--priority-gt' requires an argument" >&2; return 2; }
+				prio_gt="$2"; shift 2 ;;
+			--priority-lt)
+				[ $# -ge 2 ] || { echo "git-issue: option '--priority-lt' requires an argument" >&2; return 2; }
+				prio_lt="$2"; shift 2 ;;
+			--priority)
+				[ $# -ge 2 ] || { echo "git-issue: option '--priority' requires an argument" >&2; return 2; }
+				prio_eq="$2"; shift 2 ;;
+			-*) echo "git-issue: unknown option: $1" >&2; return 2 ;;
+			*) status="$1"; shift ;;
 		esac
 	done
 
+	if [ -z "$sort_mode" ]; then
+		sort_mode=$(config_get sort)
+		[ -z "$sort_mode" ] && sort_mode="date"
+	fi
+	case "$sort_mode" in
+		date|priority) ;;
+		*) echo "git-issue: unknown sort: $sort_mode" >&2; return 2 ;;
+	esac
+
+	local tmp
+	tmp=$(mktemp)
 	git for-each-ref --format="%(refname)" refs/issues/ | while read ref; do
-		local ID=$(echo "$ref" | perl -nalE 'say $1 if m{([^/]+?)$}')
-		echo $(git log --pretty=format:"%ct $ref %h" "$ID" -- 2> /dev/null || echo "0 $ref $ID")
-	done | sort | while read _ ref ID; do
-		local title=$(git show $ref:title)
-		local curr_status
-		curr_status="$(git show $ref:status)"
-		if [ -z "$status" ] || [ "$curr_status" = "$status" ]; then
-			if [ "$porcelain" -eq 1 ]; then
-				printf "%s|%s|%s\n" "${ref##*/}" "$curr_status" "$title"
-			else
-				printf "%s - %s\n" "$ID" "$title"
-			fi
+		[ -z "$ref" ] && continue
+		local id="${ref##*/}"
+		local key
+		if [ "$sort_mode" = "priority" ]; then
+			key=$(git show "$ref:priority" 2>/dev/null || echo 0)
+		else
+			key=$(git log --pretty=format:"%ct" "$id" 2>/dev/null | tail -1)
+			[ -z "$key" ] && key=0
+		fi
+		printf '%s\t%s\n' "$key" "$ref" >> "$tmp"
+	done
+
+	if [ "$sort_mode" = "priority" ]; then
+		sort -k1,1nr "$tmp"
+	else
+		sort -k1,1n "$tmp"
+	fi | while read key ref; do
+		[ -z "$ref" ] && continue
+		local id="${ref##*/}"
+		local title curr_status prio
+		title=$(git show "$ref:title" 2>/dev/null)
+		curr_status=$(git show "$ref:status" 2>/dev/null)
+		prio=$(git show "$ref:priority" 2>/dev/null || echo 0)
+
+		if [ -n "$status" ] && [ "$curr_status" != "$status" ]; then
+			continue
+		fi
+		if [ -n "$prio_gt" ] && ! [ "$prio" -gt "$prio_gt" ] 2>/dev/null; then
+			continue
+		fi
+		if [ -n "$prio_lt" ] && ! [ "$prio" -lt "$prio_lt" ] 2>/dev/null; then
+			continue
+		fi
+		if [ -n "$prio_eq" ] && [ "$prio" != "$prio_eq" ]; then
+			continue
+		fi
+
+		if [ "$porcelain" -eq 1 ]; then
+			printf "%s|%s|%s\n" "$id" "$curr_status" "$title"
+		else
+			local short
+			short=$(git log --pretty=format:%h "$id" 2>/dev/null | tail -1)
+			[ -z "$short" ] && short="$id"
+			printf "%s - %s\n" "$short" "$title"
 		fi
 	done
 	return 0

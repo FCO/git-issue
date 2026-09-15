@@ -1,0 +1,41 @@
+#!/bin/bash
+
+priority() {
+    local iss_id
+    local num
+    local value_file
+    local sha1_priority
+    local tree
+    local sha1_tree
+    local parent
+    local commit_hash
+
+    iss_id=$(iss-id "--all" "$1")
+    num="$2"
+
+    [ -z "$num" ] && die "Priority not specified"
+    [[ "$num" =~ ^-?[0-9]+$ ]] || die "Priority must be numeric"
+
+    local ref="refs/issues/$iss_id"
+    local path="priority"
+
+    git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
+
+    value_file=$(mktemp)
+    printf '%s\n' "$num" > "$value_file"
+
+    sha1_priority=$(git hash-object -w "$value_file")
+
+    tree=$(mktemp)
+    git ls-tree "$ref" | awk -F'\t' -v p="$path" '$2 != p' > "$tree"
+    echo "100644 blob $sha1_priority	$path" >> "$tree"
+
+    sha1_tree=$(git mktree < "$tree")
+    parent=$(git show-ref --verify --hash "$ref")
+
+    commit_hash=$(echo "Issue priority: $num ($iss_id)" | git commit-tree "$sha1_tree" -p "$parent")
+
+    git update-ref "$ref" "$commit_hash"
+
+    echo "$iss_id"
+}

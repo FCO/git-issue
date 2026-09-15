@@ -20,7 +20,14 @@ show() {
     local title
     title=$(git show "$ref:title" 2>/dev/null)
     [ -z "$title" ] && die "Not a valid issue id"
-    printf '%s - %s\n\n' "$abb" "$title"
+    printf '%s - %s\n' "$abb" "$title"
+
+    local priority
+    priority=$(git show "$ref:priority" 2>/dev/null || echo 0)
+    if [ -n "$priority" ] && [ "$priority" != "0" ]; then
+        printf 'Priority: %s\n' "$priority"
+    fi
+    echo
     local index=1 path author
     while read -r path; do
         [ -z "$path" ] && continue

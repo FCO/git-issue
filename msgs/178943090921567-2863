@@ -1,0 +1,1 @@
+`git issue ls` now supports --all/--open/--closed/--porcelain and positional status; default is open.

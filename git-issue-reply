@@ -23,7 +23,13 @@ reply() {
 
     msgs_tree=$(mktemp)
 
-    git ls-tree $ref msgs/ | perl -palE 's{\tmsgs/}{\t}' > $msgs_tree
+    local name base sha
+    while IFS= read -r name; do
+	[ -z "$name" ] && continue
+	base="${name##*/}"
+	sha=$(git rev-parse "$ref:msgs/$base" 2>/dev/null) || continue
+	echo "100644 blob $sha	$base"
+    done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null) > "$msgs_tree"
 
     echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
 

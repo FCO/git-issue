@@ -19,42 +19,45 @@ edit-msg() {
 	''|*[!0-9]*) die "Message number invalid" ;;
     esac
 
-    local path
-    path=$(git ls-tree --name-only "$ref" msgs/ 2>/dev/null | while read -r path; do
-	msg_no=$(( $msg_no - 1 ))
+    local msg_id
+    msg_id=$(git ls-tree --name-only "$ref" msgs/ 2>/dev/null | while IFS= read -r name; do
+	[ -z "$name" ] && continue
+	msg_no=$(( msg_no - 1 ))
 	if [ "$msg_no" -eq 0 ]; then
-		echo "$path"
+		echo "${name##*/}"
 	fi
     done)
 
-    [ -z "$path" ] && die "Message number invalid"
-
-    local msg_id=$(echo "$path" | perl -palE 's{msgs/}{}')
+    [ -z "$msg_id" ] && die "Message number invalid"
 
     local message_file=$(mktemp)
-    git show "$ref:$path" > "$message_file" 2>/dev/null
+    git show "$ref:msgs/$msg_id" > "$message_file" 2>/dev/null
 
-    "${EDITOR:=${VISUAL:-vi}}" $message_file
-    local sha1_msg=$(git hash-object -w $message_file)
+    "${EDITOR:=${VISUAL:-vi}}" "$message_file"
+    local sha1_msg=$(git hash-object -w "$message_file")
 
     local msgs_tree=$(mktemp)
-    git ls-tree "$ref" msgs/ | grep -F -v -- "$path" | perl -palE 's{\tmsgs/}{\t}' > "$msgs_tree"
+    local name base sha
+    while IFS= read -r name; do
+	[ -z "$name" ] && continue
+	base="${name##*/}"
+	[ "$base" = "$msg_id" ] && continue
+	sha=$(git rev-parse "$ref:msgs/$base" 2>/dev/null) || continue
+	echo "100644 blob $sha	$base"
+    done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null) > "$msgs_tree"
+    echo "100644 blob $sha1_msg	$msg_id" >> "$msgs_tree"
 
-    echo "100644 blob $sha1_msg	$msg_id" >> $msgs_tree
-
-    local sha1_msgs_tree=$(git mktree < $msgs_tree)
+    local sha1_msgs_tree=$(git mktree < "$msgs_tree")
 
     local tree=$(mktemp)
-    git ls-tree refs/issues/$iss_id | grep -v "\tmsgs$" > $tree
+    git ls-tree "$ref" | grep -v "\tmsgs$" > "$tree"
+    echo "040000 tree $sha1_msgs_tree	msgs" >> "$tree"
 
-    echo "040000 tree $sha1_msgs_tree	msgs" >> $tree
-
-    local sha1_tree=$(git mktree < $tree)
-
+    local sha1_tree=$(git mktree < "$tree")
     local parent=$(git show-ref --verify --hash "$ref")
-    local commit_hash=$(echo "Reply edited: ($msg_id)" | git commit-tree $sha1_tree -p $parent)
+    local commit_hash=$(echo "Reply edited: ($msg_id)" | git commit-tree "$sha1_tree" -p "$parent")
 
-    git update-ref refs/issues/$iss_id $commit_hash
+    git update-ref "$ref" "$commit_hash"
 
     echo "$msg_id"
 }

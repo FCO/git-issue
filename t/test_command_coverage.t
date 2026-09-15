@@ -90,15 +90,17 @@ tap_assert "test \"\$(msgs_count '$REPO' '$id')\" = '2'" "edit-msg: issue has tw
 
 p1=$(git -C "$REPO" ls-tree --name-only "refs/issues/$id" msgs/ | sed -n '1p')
 p2=$(git -C "$REPO" ls-tree --name-only "refs/issues/$id" msgs/ | sed -n '2p')
+m1="${p1##*/}"
+m2="${p2##*/}"
 paths_before=$(git -C "$REPO" ls-tree --name-only "refs/issues/$id" msgs/ | sort)
-c1_before=$(git -C "$REPO" show "refs/issues/$id:$p1")
+c1_before=$(git -C "$REPO" show "refs/issues/$id:msgs/$m1")
 
 ED=$(mk_editor_overwrite "second body EDITED")
 EDITOR="$ED" git issue edit-msg "$id" 2 >/dev/null
 
 paths_after=$(git -C "$REPO" ls-tree --name-only "refs/issues/$id" msgs/ | sort)
-c1_after=$(git -C "$REPO" show "refs/issues/$id:$p1")
-c2_after=$(git -C "$REPO" show "refs/issues/$id:$p2")
+c1_after=$(git -C "$REPO" show "refs/issues/$id:msgs/$m1")
+c2_after=$(git -C "$REPO" show "refs/issues/$id:msgs/$m2")
 
 tap_assert "test \"\$c2_after\" = 'second body EDITED'" "edit-msg: selected message (number 2) content changed"
 tap_assert "test \"\$c1_after\" = \"\$c1_before\"" "edit-msg: other message content untouched"

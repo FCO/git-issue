@@ -1,0 +1,82 @@
+#!/bin/bash
+
+config_ref="refs/issue-config"
+
+# Read a single configuration key. Echoes the value (empty if unset).
+config_get() {
+	local key="$1"
+	git show "$config_ref:$key" 2>/dev/null
+	return 0
+}
+
+config() {
+	local ref="$config_ref"
+	local key value
+
+	# `git issue config` — list all keys as `key = value`, sorted.
+	if [ $# -eq 0 ]; then
+		git ls-tree --name-only "$ref" 2>/dev/null | while read -r key; do
+			[ -z "$key" ] && continue
+			value=$(git show "$ref:$key" 2>/dev/null)
+			printf '%s = %s\n' "$key" "$value"
+		done | sort
+		return 0
+	fi
+
+	# `git issue config --unset <key>` — remove a key.
+	if [ "$1" = "--unset" ]; then
+		key="${2:-}"
+		[ -z "$key" ] && die "config: --unset requires a key"
+		git show-ref --verify --quiet "$ref" || return 0
+		git ls-tree --name-only "$ref" 2>/dev/null | grep -Fxq "$key" || return 0
+
+		local tree sha1_tree parent commit_hash
+		tree=$(mktemp)
+		git ls-tree "$ref" | awk -F'\t' -v k="$key" '$2 != k' > "$tree"
+
+		if [ -s "$tree" ]; then
+			sha1_tree=$(git mktree < "$tree")
+			parent=$(git show-ref --verify --hash "$ref")
+			commit_hash=$(echo "Config unset: $key" | git commit-tree "$sha1_tree" -p "$parent")
+			git update-ref "$ref" "$commit_hash"
+		else
+			git update-ref -d "$ref"
+		fi
+		return 0
+	fi
+
+	key="$1"
+
+	if [ $# -ge 2 ]; then
+		# `git issue config <key> <value>` — set/update the key.
+		value="$2"
+
+		local value_file sha1_value tree sha1_tree parent commit_hash
+		value_file=$(mktemp)
+		printf '%s\n' "$value" > "$value_file"
+		sha1_value=$(git hash-object -w "$value_file")
+
+		tree=$(mktemp)
+		if git show-ref --verify --quiet "$ref"; then
+			git ls-tree "$ref" | awk -F'\t' -v k="$key" '$2 != k' > "$tree"
+		else
+			: > "$tree"
+		fi
+		echo "100644 blob $sha1_value	$key" >> "$tree"
+
+		sha1_tree=$(git mktree < "$tree")
+
+		if git show-ref --verify --quiet "$ref"; then
+			parent=$(git show-ref --verify --hash "$ref")
+			commit_hash=$(echo "Config set: $key" | git commit-tree "$sha1_tree" -p "$parent")
+		else
+			commit_hash=$(echo "Config set: $key" | git commit-tree "$sha1_tree")
+		fi
+
+		git update-ref "$ref" "$commit_hash"
+		return 0
+	fi
+
+	# `git issue config <key>` — print the value (or nothing if unset).
+	config_get "$key"
+}

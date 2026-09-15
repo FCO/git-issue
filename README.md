@@ -71,8 +71,15 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
   - Sets `status` to `open` and updates the ref. If omitted, prompts to select a closed issue. Prompts for confirmation unless `-f`/`--force` is given.
   - Example: `git issue reopen "$ISSUE_ID"`
 - `git issue status <ISSUE_ID> <status>`
-  - Sets the issue's status to an arbitrary string (e.g. `open`, `closed`, `in-progress`, `blocked`). Generalizes `close`/`reopen`.
+  - Sets the issue's status to an arbitrary string (e.g. `open`, `closed`, `in-progress`, `blocked`). Generalizes `close`/reopen.
   - Example: `git issue status "$ISSUE_ID" in-progress`
+- `git issue config [<KEY> [<VALUE>]]`
+  - Manages repository-level configuration, stored in the `refs/issue-config` ref (one blob per key). With no arguments, lists all keys as `key = value` (sorted). With `<KEY>` only, prints that key's value (nothing if unset). With `<KEY> <VALUE>`, sets/updates the key. Use `config --unset <KEY>` to remove a key.
+  - Examples:
+    - `git issue config` (list all keys)
+    - `git issue config sort` (get the `sort` value)
+    - `git issue config sort priority` (set `sort` to `priority`)
+    - `git issue config --unset sort` (remove `sort`)
 - `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
   - Examples:

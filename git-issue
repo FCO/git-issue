@@ -103,6 +103,7 @@ path=$(readlink -f $0)
 
 source "$(dirname $path)/git-issue-edit-msg"
 source "$(dirname $path)/git-issue-edit-title"
+source "$(dirname $path)/git-issue-config"
 source "$(dirname $path)/git-issue-ls"
 source "$(dirname $path)/git-issue-new"
 source "$(dirname $path)/git-issue-pull"
@@ -125,7 +126,7 @@ case "$cmd" in
 		help
 		exit 0
 		;;
-	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|pull|push|fetch|sync|show-messages)
+	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|config|pull|push|fetch|sync|show-messages)
 		"$cmd" "${@:2}"
 		;;
 	*)

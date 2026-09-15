@@ -18,6 +18,9 @@ Commands:
   edit-title [<id>]              Edit an issue's title.
   edit-msg [<id>] [<n>]          Edit message number <n> (1-based) of an issue.
   status <id> <status>           Set an arbitrary status string.
+  config [<key> [<value>]]       List, get, or set configuration (stored in
+                                 refs/issue-config). Use `--unset <key>` to
+                                 remove a key.
   close [-f] [<id>]              Mark an issue closed (prompts unless -f).
   reopen [-f] [<id>]             Re-open a closed issue (prompts unless -f).
   pull [<remote>] [<id>]         Fetch and merge remote issue refs.

@@ -1,0 +1,1 @@
+Added t/test_collaboration.t simulating two clones converging via pull/show/edit/push, including parallel replies and a manageable title conflict.

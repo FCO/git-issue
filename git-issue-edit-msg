@@ -47,6 +47,10 @@ edit-msg() {
     done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null) > "$msgs_tree"
     echo "100644 blob $sha1_msg	$msg_id" >> "$msgs_tree"
 
+    echo "DEBUG edit-msg msg_id=[$msg_id]" >&2
+    echo "DEBUG edit-msg msgs_tree:" >&2
+    cat "$msgs_tree" >&2
+
     local sha1_msgs_tree=$(git mktree < "$msgs_tree")
 
     local tree=$(mktemp)

@@ -1,0 +1,1 @@
+Removed a stray debug echo and a broken `[ has-fzf ]` test that suppressed message rendering in show.

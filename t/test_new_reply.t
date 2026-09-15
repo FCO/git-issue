@@ -10,7 +10,7 @@ cd "$REPO"
 
 export EDITOR=true
 export VISUAL=true
-issue_id=$(git issue new "Test issue" | tail -1)
+issue_id=$(new_issue . "Test issue")
 
 tap_assert "ref_exists '$REPO' 'refs/issues/$issue_id'" "issue ref exists"
 

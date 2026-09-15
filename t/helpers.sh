@@ -67,3 +67,18 @@ msgs_count() {
   local dir="$1"; local id="$2"
   git -C "$dir" ls-tree --name-only "refs/issues/$id" msgs/ | wc -l | tr -d ' '
 }
+
+# Resolve a (possibly short) issue id to the full ref-name hash.
+resolve_id() {
+  local dir="$1"; local id="$2"
+  git -C "$dir" log --pretty=format:%H "$id" 2>/dev/null | tail -1 || echo "$id"
+}
+
+# Create an issue and return its FULL id (the ref name). `git issue new`
+# prints the short hash, so resolve it back to the full hash here.
+new_issue() {
+  local dir="$1"; shift
+  local short
+  short=$(git -C "$dir" issue new "$@" | tail -1)
+  resolve_id "$dir" "$short"
+}

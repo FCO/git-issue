@@ -1,0 +1,32 @@
+#!/bin/bash
+
+help() {
+	cat <<'EOF'
+git issue — manage issues directly in a Git repository (refs/issues/*)
+
+Usage: git issue <command> [args]
+
+Commands:
+  new [-m <message>] [<title>]   Create a new issue. Opens $EDITOR for the first
+                                 message unless -m/--message is given.
+  show [--all|--open|--closed] [<id>]  Show an issue's title and messages.
+                                 (default: pick an open issue).
+  reply [<id>]                   Add a message to an issue.
+  ls [<status>]                  List issues (default: open). Accepts --all,
+                                 --open, --closed, --porcelain, or a positional
+                                 <status> string (any status value).
+  edit-title [<id>]              Edit an issue's title.
+  edit-msg [<id>] [<n>]          Edit message number <n> (1-based) of an issue.
+  status <id> <status>           Set an arbitrary status string.
+  close [-f] [<id>]              Mark an issue closed (prompts unless -f).
+  reopen [-f] [<id>]             Re-open a closed issue (prompts unless -f).
+  pull [<remote>] [<id>]         Fetch and merge remote issue refs.
+  push [<remote>] [<id>]         Push local issue refs to a remote.
+  fetch [<remote>] [<id>]        Fetch remote issue refs (does not import).
+  sync [<remote>] [<id>]         Short for pull, then push, then pull.
+  help                           Show this help.
+
+<id> may be the full issue hash or an unambiguous short prefix of it.
+Run `git issue help` for this text.
+EOF
+}

@@ -6,5 +6,13 @@ fetch() {
 
 	# --prune drops stale refs/remote-issues/* refs whose source issue was
 	# deleted on the remote, so a subsequent pull does not resurrect them.
-	git fetch --prune --atomic "$repo" "$remote_ref:$local_ref"
+	local output rc
+	output=$(git fetch --prune --atomic "$repo" "$remote_ref:$local_ref" 2>&1)
+	rc=$?
+	debug "$output"
+
+	local n
+	n=$(printf '%s\n' "$output" | grep -E '\-> refs/remote-issues/' | grep -v '\[deleted\]' | wc -l | tr -d ' ')
+	echo "fetched $n issue(s)"
+	return $rc
 }

@@ -1,21 +1,36 @@
 #!/bin/bash
 
 show() {
-    local iss_id=$(iss-id "open" $1)
-
-    local abb=$(git log --pretty=format:%h $iss_id | tail -1 2> /dev/null || echo $iss_id)
-    local ref="refs/issues/$iss_id"
-    local title=$(git show $ref:title 2> /dev/null)
-    [ -z "$title" ] && die "Not a valid issue id"
-    echo -e "$abb - $title\n"
-    local index=1
-    git ls-tree --name-only "$ref" msgs/ | while read path; do
-        local author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
-        echo -e "\t$index) $author:"
-        git show $ref:$path | while read line; do
-            echo -e "\t\t$line"
-        done
-        index=$(($index + 1))
-        echo
+    local status="open"
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            --all) status="--all"; shift ;;
+            --open) status="--open"; shift ;;
+            --closed) status="--closed"; shift ;;
+            *) break ;;
+        esac
     done
+
+    local iss_id
+    iss_id=$(iss-id "$status" "$1")
+
+    local abb
+    abb=$(git log --pretty=format:%h "$iss_id" 2>/dev/null | tail -1 || echo "$iss_id")
+    local ref="refs/issues/$iss_id"
+    local title
+    title=$(git show "$ref:title" 2>/dev/null)
+    [ -z "$title" ] && die "Not a valid issue id"
+    printf '%s - %s\n\n' "$abb" "$title"
+    local index=1 path author
+    while read -r path; do
+        [ -z "$path" ] && continue
+        author=$(git log --pretty=format:"%aN" "$ref" -- "$path" | tail -1)
+        printf '\t%d) %s:\n' "$index" "$author"
+        git show "$ref:$path" 2>/dev/null | while IFS= read -r line || [ -n "$line" ]; do
+            printf '\t\t%s\n' "$line"
+        done
+        index=$(( index + 1 ))
+        echo
+    done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+    return 0
 }

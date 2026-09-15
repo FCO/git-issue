@@ -8,8 +8,7 @@ A small set of Git scripts that manage issues directly in Git’s object store, 
   - `title`: blob with the issue title
   - `status`: blob with the issue state (e.g., `open`)
   - `msgs/`: directory with blobs, each representing a message/reply.
-  - First message (created with `new`) is named with a generated short id (e.g., `<gen_id>`).
-  - Subsequent messages (via `reply`) are named `<ISSUE_ID>-<gen_id>`.
+  - Each message (the first via `new`, later ones via `reply`) is named with a generated id (`<gen_id>`), e.g. `178942881881004-4603`.
 - Operations (`new`/`reply`/`edit`) assemble trees with `git mktree` and create commits with `git commit-tree`, then update the ref via `git update-ref`.
 
 ## Requirements
@@ -32,14 +31,17 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
 
 ### Examples
 
-- `git issue new "Issue title"`
-  - Creates a new issue. Opens the editor for the first message.
+- `git issue new [-m|--message <msg>] "Issue title"`
+  - Creates a new issue. Opens the editor for the first message, unless `-m`/`--message` is given.
   - Updates `refs/issues/<ISSUE_ID>` with a root commit (no parent) containing `title`, `status`, and `msgs/<msg_id>`.
+  - Prints the short issue id (an unambiguous hash prefix); the full hash is the ref name.
   - Example: `ISSUE_ID=$(git issue new "Login fails on Safari" | tail -1)`
-- `git issue show [<ISSUE_ID>]`
-  - If omitted, lists issues and prompts for an id.
+  - Example: `git issue new -m "It crashes on launch" "Login fails on Safari"`
+- `git issue show [--all|--open|--closed] [<ISSUE_ID>]`
+  - If omitted, lists issues and prompts for an id. By default only `open` issues are listed; `--all` lists every status, `--open`/`--closed` restrict to that status.
   - Shows the title and lists all messages (`msgs/*`), indicating the author of the commit that includes each message.
   - Example: `git issue show "$ISSUE_ID"`
+  - Example: `git issue show --closed`
 - `git issue reply [<ISSUE_ID>]`
   - If omitted, lists issues and prompts for an id.
   - Adds a message to the issue. Opens the editor for the content.
@@ -52,25 +54,44 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
 - `git issue edit-msg [<ISSUE_ID>] [<MSG_NUMBER>]`
   - Edits a specific message by its numeric position shown in `git issue show` (1-based). Preserves the message id and creates a new commit.
   - If `<ISSUE_ID>` is omitted, lists and prompts for an id; if `<MSG_NUMBER>` is omitted, shows messages and prompts for a number.
-  - Message files live under `msgs/` and are named using the issue id plus a short generated suffix (e.g., `<ISSUE_ID>-<gen_id>`).
+  - Message files live under `msgs/` and are named with a generated id (e.g., `<gen_id>`); message ids are preserved across edits.
   - Example: `git issue edit-msg "$ISSUE_ID" 2` (edit the second message)
-- `git issue ls [open|closed]`
+- `git issue ls [<status>|--all|--open|--closed] [--porcelain]`
   - Lists issues (`refs/issues/*`) filtered by status; default shows open issues. Displays short hash and title.
+  - `--all` shows every status; `--open`/`--closed` filter to those values; any other positional `<status>` string filters to that exact value.
+  - `--porcelain` emits machine-readable `<full-hash>|<status>|<title>` lines.
   - Examples:
     - `git issue ls` (open)
     - `git issue ls closed`
-- `git issue close [<ISSUE_ID>]`
-  - Sets `status` to `closed` and updates the ref. If omitted, prompts to select an open issue.
+    - `git issue ls --all`
+- `git issue close [-f|--force] [<ISSUE_ID>]`
+  - Sets `status` to `closed` and updates the ref. If omitted, prompts to select an open issue. Prompts for confirmation unless `-f`/`--force` is given.
   - Example: `git issue close "$ISSUE_ID"`
-- `git issue reopen [<ISSUE_ID>]`
-  - Sets `status` to `open` and updates the ref. If omitted, prompts to select a closed issue.
+- `git issue reopen [-f|--force] [<ISSUE_ID>]`
+  - Sets `status` to `open` and updates the ref. If omitted, prompts to select a closed issue. Prompts for confirmation unless `-f`/`--force` is given.
   - Example: `git issue reopen "$ISSUE_ID"`
+- `git issue status <ISSUE_ID> <status>`
+  - Sets the issue's status to an arbitrary string (e.g. `open`, `closed`, `in-progress`, `blocked`). Generalizes `close`/`reopen`.
+  - Example: `git issue status "$ISSUE_ID" in-progress`
 - `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
   - Examples:
     - `git issue pull`
     - `git issue push`
     - `git issue sync`
+- `git issue help`
+  - Prints usage for all commands. Also shown by `git issue` with no arguments, `-h`, or `--help`.
+- `git issue show-messages <ISSUE_ID>`
+  - Internal helper that prints an issue's messages; used by the `fzf` interactive preview. Prefer `show` for direct use.
+
+## Shell completion
+
+Completion scripts for bash and zsh are in `completions/`:
+
+- bash: `source completions/git-issue.bash`
+- zsh: `source completions/git-issue.zsh`
+
+They complete the `git issue` subcommands (and issue ids where applicable).
 
 ## Recommended workflow
 
@@ -85,7 +106,8 @@ If push is rejected (non-fast-forward), fetch updates (`pull`) and re-apply your
 ## Web (GitHub Pages)
 
 Static site is generated by `./git-issue-generate-page` into `docs/`:
-- Index lists issues from `refs/issues/*` sorted by earliest message timestamp.
+- `index.html` lists **open** issues (sorted by earliest message timestamp), with a link to the closed-issues page.
+- `closed.html` lists **closed** issues, with a link back to the open-issues page.
 - Each issue page shows title, status, opener, timestamps, and all messages with authors.
 - Permalinks to each message via anchors.
 
@@ -105,6 +127,8 @@ This repository includes `.github/workflows/gh-pages.yml` which:
 - Fetches `refs/issues/*`.
 - Runs the generator and uploads `docs/` as the Pages artifact.
 - Deploys to GitHub Pages.
+
+It regenerates automatically every 30 minutes via a `schedule` (cron), on every push to `main`, and on manual `workflow_dispatch`. Note: GitHub Actions does not trigger `push` events for the custom `refs/issues/*` refs, so issue changes are picked up by the scheduled run (not instantly).
 
 No React/Vite is required for the static site.
 

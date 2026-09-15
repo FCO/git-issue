@@ -1,14 +1,18 @@
 #!/bin/bash
 
 edit-title() {
-    local iss_id=$(iss-id "open" $1)
+    local iss_id
+    iss_id=$(iss-id "open" "$1")
 
     local ref="refs/issues/$iss_id"
+    git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
+
     local path="title"
 
-    local title_file=$(mktemp)
-    git show $ref:$path > $title_file
-    [ -s $title_file ] || die "Not a valid issue id"
+    local title_file
+    title_file=$(mktemp)
+    git show "$ref:$path" > "$title_file" 2>/dev/null
+    [ -s "$title_file" ] || die "Not a valid issue id"
 
     "${EDITOR:=${VISUAL:-vi}}" $title_file
     local sha1_title=$(git hash-object -w $title_file)

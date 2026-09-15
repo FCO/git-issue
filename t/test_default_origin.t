@@ -47,7 +47,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Default origin" | tail -1)
+id=$(new_issue "$A" "Default origin")
 
 # push with no args -> origin (all issues)
 git -C "$A" issue push >/dev/null 2>&1
@@ -71,8 +71,8 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Sync default one" | tail -1)
-id2=$(git -C "$A" issue new "Sync default two" | tail -1)
+id1=$(new_issue "$A" "Sync default one")
+id2=$(new_issue "$A" "Sync default two")
 
 git -C "$A" issue sync >/dev/null 2>&1
 tap_assert "ref_exists '$REMOTE' 'refs/issues/$id1'" "sync (no args) pushes id1 to origin"
@@ -99,7 +99,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Single arg" | tail -1)
+id=$(new_issue "$A" "Single arg")
 
 # Publish id to origin properly (with an explicit remote) so that a
 # hypothetical "id-only defaults to origin" behavior would be observable.
@@ -107,7 +107,7 @@ git -C "$A" issue push origin "$id" >/dev/null 2>&1
 
 # `push <id>` treats <id> as the remote name, so a brand-new issue does NOT
 # reach origin (it fails instead of defaulting to origin).
-id2=$(git -C "$A" issue new "Single arg push" | tail -1)
+id2=$(new_issue "$A" "Single arg push")
 git -C "$A" issue push "$id2" >/dev/null 2>&1 || true
 if ref_exists "$REMOTE" "refs/issues/$id2"; then pushed=yes; else pushed=no; fi
 tap_assert "test \"$pushed\" = 'no'" "push <id> (no repo) does NOT default to origin (id treated as remote)"

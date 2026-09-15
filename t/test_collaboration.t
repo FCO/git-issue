@@ -70,7 +70,7 @@ EDITOR_ALICE=$(mk_editor "alice-reply")
 EDITOR_BOB=$(mk_editor "bob-reply")
 
 # Alice creates an issue and pushes it to the shared origin.
-id=$(git -C "$A" issue new "Sequential feature" | tail -1)
+id=$(new_issue "$A" "Sequential feature")
 git -C "$A" issue push origin "$id" >/dev/null 2>&1
 tap_assert "ref_exists '$REMOTE' 'refs/issues/$id'" "A: new issue reached origin"
 
@@ -116,7 +116,7 @@ B=$(mkclone "$REMOTE" bob bob@example.com)
 EDITOR_ALICE=$(mk_editor "alice-parallel-reply")
 EDITOR_BOB=$(mk_editor "bob-parallel-reply")
 
-id=$(git -C "$A" issue new "Parallel replies" | tail -1)
+id=$(new_issue "$A" "Parallel replies")
 git -C "$A" issue push origin "$id" >/dev/null 2>&1
 git -C "$B" issue pull origin "$id" >/dev/null 2>&1
 
@@ -156,7 +156,7 @@ B=$(mkclone "$REMOTE" bob bob@example.com)
 EDITOR_ALICE=$(mk_editor " [alice]")
 EDITOR_BOB=$(mk_editor " [bob]")
 
-id=$(git -C "$A" issue new "Title conflict" | tail -1)
+id=$(new_issue "$A" "Title conflict")
 git -C "$A" issue push origin "$id" >/dev/null 2>&1
 git -C "$B" issue pull origin "$id" >/dev/null 2>&1
 

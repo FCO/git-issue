@@ -9,7 +9,7 @@ REPO=$(with_repo)
 cd "$REPO"
 export EDITOR=true; export VISUAL=true
 
-issue_id=$(git issue new "Initial" | tail -1)
+issue_id=$(new_issue . "Initial")
 
 # Edit title content changed
 git issue edit-title "$issue_id" > /dev/null

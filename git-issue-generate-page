@@ -1,7 +1,8 @@
 #!/bin/bash
 
 # Generate multiple static HTML pages for git issues
-# - Index page (lista) based on git-issue-ls logic
+# - index.html: open issues (with a link to closed.html)
+# - closed.html: closed issues (with a link back to index.html)
 # - One page per issue (detalhes) based on git-issue-show logic
 # - Dark theme, cross-linked pages with timestamps and permalinks
 #
@@ -13,18 +14,21 @@ escape_html() {
   sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
 }
 
-list_open_issues() {
+list_issues() {
+  # $1 = optional status filter ("" = all statuses)
   # Returns: id|abb|ref|title (sorted by timestamp like git-issue-ls)
+  local status="${1:-}"
   git for-each-ref --format="%(refname)" refs/issues/ | while read -r ref; do
     local ID
     ID=$(echo "$ref" | perl -nalE 'say $1 if m{([^/]+?)$}')
     echo $(git log --pretty=format:"%ct $ref %h" "$ID" -- 2>/dev/null || echo "0 $ref $ID")
   done | sort | while read -r _ ref third; do
-    local title abb id
+    local title abb id curr_status
     title=$(git show "$ref:title" 2>/dev/null || echo "")
+    curr_status=$(git show "$ref:status" 2>/dev/null || echo "")
     abb="$third"
     id=$(echo "$ref" | perl -nalE 'say $1 if m{([^/]+?)$}')
-    if [ -n "$title" ]; then
+    if [ -n "$title" ] && { [ -z "$status" ] || [ "$curr_status" = "$status" ]; }; then
       echo "$id|$abb|$ref|$title"
     fi
   done
@@ -32,13 +36,15 @@ list_open_issues() {
 
 page_head() {
   local title="$1"
+  local escaped_title
+  escaped_title=$(printf '%s' "$title" | escape_html)
   cat <<EOF
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>$title</title>
+  <title>$escaped_title</title>
   <style>
     :root{color-scheme:dark light}
     body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,Cantarell,Noto Sans,sans-serif;margin:0;background:#0b0e11;color:#e6e6e6}
@@ -71,20 +77,26 @@ page_head() {
 EOF
 }
 
-write_index_page() {
+write_list_page() {
   local out_dir="$1"
-  local out_file="$out_dir/index.html"
-  page_head "Issues" > "$out_file"
+  local file="$2"
+  local heading="$3"
+  local status_filter="$4"
+  local other_href="$5"
+  local other_label="$6"
+
+  local out_file="$out_dir/$file"
+  page_head "$heading" > "$out_file"
   {
     echo "  <header>"
-    echo "    <h1>Issues</h1>"
-    echo "    <p class=\"muted\">List based on git-issue-ls logic</p>"
+    echo "    <h1>$heading</h1>"
+    echo "    <p class=\"muted\">List based on git-issue-ls logic · <a href=\"$other_href\">$other_label</a></p>"
     echo "  </header>"
     echo "  <div class=\"card\">"
     echo "    <ul class=\"list\">"
 
     local issues
-    issues=$(list_open_issues || true)
+    issues=$(list_issues "$status_filter" || true)
     if [ -z "$issues" ]; then
       echo "      <li>No issues found.</li>"
     else
@@ -113,7 +125,7 @@ write_index_page() {
     echo "  </div>"
   } >> "$out_file"
   page_tail >> "$out_file"
-  echo "[git-issue] Index: $out_file"
+  echo "[git-issue] $heading: $out_file"
 }
 
 write_issue_page() {
@@ -199,9 +211,10 @@ generate_pages() {
   mkdir -p "$out_dir"
   echo "[git-issue] Generating index and issue pages..."
 
-  write_index_page "$out_dir"
+  write_list_page "$out_dir" "index.html" "Open Issues" "open" "closed.html" "View closed issues"
+  write_list_page "$out_dir" "closed.html" "Closed Issues" "closed" "index.html" "View open issues"
 
-  list_open_issues | while IFS='|' read -r id abb ref title; do
+  list_issues "" | while IFS='|' read -r id abb ref title; do
     write_issue_page "$out_dir" "$id" "$abb" "$ref"
   done
 

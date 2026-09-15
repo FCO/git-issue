@@ -40,9 +40,9 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Alpha" | tail -1)
-id2=$(git -C "$A" issue new "Beta"  | tail -1)
-id3=$(git -C "$A" issue new "Gamma" | tail -1)
+id1=$(new_issue "$A" "Alpha")
+id2=$(new_issue "$A" "Beta")
+id3=$(new_issue "$A" "Gamma")
 
 # push all three with no id (wildcard *)
 git -C "$A" issue push origin >/dev/null 2>&1
@@ -76,8 +76,8 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Fast-forward" | tail -1)
-id2=$(git -C "$A" issue new "Divergent" | tail -1)
+id1=$(new_issue "$A" "Fast-forward")
+id2=$(new_issue "$A" "Divergent")
 git -C "$A" issue push origin >/dev/null 2>&1
 git -C "$B" issue pull origin >/dev/null 2>&1
 
@@ -87,7 +87,7 @@ git -C "$A" issue reply "$id1" >/dev/null 2>&1
 git -C "$A" issue reply "$id2" >/dev/null 2>&1
 git -C "$B" issue reply "$id2" >/dev/null 2>&1
 # id3: brand-new issue on A (new to B)
-id3=$(git -C "$A" issue new "Brand new" | tail -1)
+id3=$(new_issue "$A" "Brand new")
 
 git -C "$A" issue push origin >/dev/null 2>&1
 
@@ -108,8 +108,8 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Retry one" | tail -1)
-id2=$(git -C "$A" issue new "Retry two" | tail -1)
+id1=$(new_issue "$A" "Retry one")
+id2=$(new_issue "$A" "Retry two")
 git -C "$A" issue push origin >/dev/null 2>&1
 git -C "$B" issue pull origin >/dev/null 2>&1
 
@@ -139,14 +139,14 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Existing" | tail -1)
-id2=$(git -C "$A" issue new "Existing ahead" | tail -1)
+id1=$(new_issue "$A" "Existing")
+id2=$(new_issue "$A" "Existing ahead")
 git -C "$A" issue push origin >/dev/null 2>&1
 git -C "$B" issue pull origin >/dev/null 2>&1
 
 # B advances id1 (ahead) and creates a brand-new id3 (new to remote)
 git -C "$B" issue reply "$id1" >/dev/null 2>&1
-id3=$(git -C "$B" issue new "Brand new" | tail -1)
+id3=$(new_issue "$B" "Brand new")
 
 git -C "$B" issue push origin >/dev/null 2>&1
 tap_assert "test \"\$(msgs_count '$REMOTE' '$id1')\" = '2'" "push * fast-forwards ahead issue id1"
@@ -160,8 +160,8 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Sync one" | tail -1)
-id2=$(git -C "$A" issue new "Sync two" | tail -1)
+id1=$(new_issue "$A" "Sync one")
+id2=$(new_issue "$A" "Sync two")
 git -C "$A" issue sync origin >/dev/null 2>&1
 tap_assert "ref_exists '$REMOTE' 'refs/issues/$id1'" "sync * pushes id1"
 tap_assert "ref_exists '$REMOTE' 'refs/issues/$id2'" "sync * pushes id2"
@@ -206,8 +206,8 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Survivor" | tail -1)
-id2=$(git -C "$A" issue new "Deleted" | tail -1)
+id1=$(new_issue "$A" "Survivor")
+id2=$(new_issue "$A" "Deleted")
 git -C "$A" issue push origin >/dev/null 2>&1
 
 # B fetches both (populating refs/remote-issues/*) but does not import them

@@ -66,7 +66,7 @@ REPO=$(with_repo)
 CLEANUP_DIRS+=("$REPO")
 cd "$REPO"
 
-id=$(git issue new "Original title" | tail -1)
+id=$(new_issue . "Original title")
 tap_assert "test \"\$(git -C '$REPO' show 'refs/issues/$id:title')\" = 'Original title'" "edit-title: title created with expected content"
 
 ED=$(mk_editor_overwrite "Renamed title")
@@ -81,7 +81,7 @@ CLEANUP_DIRS+=("$REPO")
 cd "$REPO"
 
 ED=$(mk_editor_overwrite "first body")
-id=$(EDITOR="$ED" git issue new "Two messages" | tail -1)
+id=$(EDITOR="$ED" new_issue . "Two messages")
 
 ED=$(mk_editor_overwrite "second body")
 EDITOR="$ED" git issue reply "$id" >/dev/null
@@ -112,7 +112,7 @@ CLEANUP_DIRS+=("$REPO")
 cd "$REPO"
 
 ED=$(mk_editor_overwrite "the-visible-body")
-id=$(EDITOR="$ED" git issue new "Show title" | tail -1)
+id=$(EDITOR="$ED" new_issue . "Show title")
 show_out=$(git issue show "$id")
 
 tap_assert "echo \"\$show_out\" | head -1 | grep -E '^[0-9a-f]{7,} - Show title'" "show: header line has abb - title"
@@ -126,7 +126,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Fetched" | tail -1)
+id=$(new_issue "$A" "Fetched")
 git -C "$A" issue push origin "$id" >/dev/null 2>&1
 git -C "$B" issue fetch origin "$id" >/dev/null 2>&1
 
@@ -145,7 +145,7 @@ CLEANUP_DIRS+=("$REPO")
 cd "$REPO"
 
 ED=$(mk_editor_overwrite "first page body")
-id=$(EDITOR="$ED" git issue new "Escape & Test" | tail -1)
+id=$(EDITOR="$ED" new_issue . "Escape & Test")
 
 ED=$(mk_editor_overwrite "second page body")
 EDITOR="$ED" git issue reply "$id" >/dev/null

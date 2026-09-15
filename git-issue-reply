@@ -13,7 +13,7 @@ reply() {
     local ref="refs/issues/$iss_id"
     git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
 
-    show $iss_id | less
+    show $iss_id | pager
 
     local message_file=$(mktemp)
     "${EDITOR:=${VISUAL:-vi}}" $message_file

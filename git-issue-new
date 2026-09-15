@@ -1,7 +1,25 @@
 #!/bin/bash
 
 new() {
-    local title="$@"
+    local title=""
+    local message=""
+    local have_message=0
+    local args=()
+
+    while [ $# -gt 0 ]; do
+        case "$1" in
+            -m|--message)
+                [ $# -ge 2 ] || { echo "git-issue: option '$1' requires an argument" >&2; return 2; }
+                message="${2:-}"
+                have_message=1
+                shift 2
+                ;;
+            -*) echo "git-issue: unknown option: $1" >&2; return 2 ;;
+            *) args+=("$1"); shift ;;
+        esac
+    done
+    title="${args[*]}"
+
     local sha1_title
     local sha1_status
     local message_file
@@ -15,8 +33,9 @@ new() {
 
     if [ -z "$title" ]; then
 	echo -n "Issue title: "
-	read title
+	read title || true
     fi
+    [ -z "$title" ] && die "Title required"
 
     debug "title: $title"
     sha1_title=$(printf %s "$title" | git hash-object -w --stdin)
@@ -26,7 +45,11 @@ new() {
     debug "sha1_status: $sha1_status"
 
     message_file=$(mktemp)
-    "${EDITOR:=${VISUAL:-vi}}" $message_file
+    if [ "$have_message" -eq 1 ]; then
+	printf '%s\n' "$message" > "$message_file"
+    else
+	"${EDITOR:=${VISUAL:-vi}}" $message_file
+    fi
     debug-cat $message_file
 
     msg_id=$(gen_id)
@@ -51,5 +74,5 @@ new() {
 
     git update-ref refs/issues/$commit_hash $commit_hash
 
-    echo $commit_hash
+    git rev-parse --short $commit_hash
 }

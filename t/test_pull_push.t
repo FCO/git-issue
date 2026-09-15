@@ -37,7 +37,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Shared issue" | tail -1)
+id=$(new_issue "$A" "Shared issue")
 
 tap_assert "ref_exists '$A' 'refs/issues/$id'" "new issue ref exists locally"
 
@@ -66,7 +66,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Divergent" | tail -1)
+id=$(new_issue "$A" "Divergent")
 git -C "$A" issue push origin "$id" >/dev/null 2>&1
 git -C "$B" issue pull origin "$id" >/dev/null 2>&1
 
@@ -97,7 +97,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Retry" | tail -1)
+id=$(new_issue "$A" "Retry")
 git -C "$A" issue push origin "$id" >/dev/null 2>&1
 git -C "$B" issue pull origin "$id" >/dev/null 2>&1
 
@@ -106,7 +106,7 @@ git -C "$A" issue reply "$id" >/dev/null 2>&1
 git -C "$B" issue reply "$id" >/dev/null 2>&1
 git -C "$B" issue push origin "$id" >/dev/null 2>&1
 
-push_out=$(git -C "$A" issue push origin "$id" 2>&1 || true)
+push_out=$(DEBUG=1 git -C "$A" issue push origin "$id" 2>&1 || true)
 if echo "$push_out" | grep -q 'rejected'; then was_rejected=yes; else was_rejected=no; fi
 tap_assert "test \"$was_rejected\" = 'yes'" "A push was rejected on first attempt"
 
@@ -122,7 +122,7 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id=$(git -C "$A" issue new "Sync" | tail -1)
+id=$(new_issue "$A" "Sync")
 git -C "$A" issue sync origin "$id" >/dev/null 2>&1
 tap_assert "ref_exists '$REMOTE' 'refs/issues/$id'" "sync pushes new issue to remote"
 
@@ -146,8 +146,8 @@ REMOTE=$(mkbare)
 A=$(mkclone "$REMOTE")
 B=$(mkclone "$REMOTE")
 
-id1=$(git -C "$A" issue new "Wild one" | tail -1)
-id2=$(git -C "$A" issue new "Wild two" | tail -1)
+id1=$(new_issue "$A" "Wild one")
+id2=$(new_issue "$A" "Wild two")
 git -C "$A" issue push origin >/dev/null 2>&1   # push all issues (default *)
 
 git -C "$B" issue fetch origin >/dev/null 2>&1  # fetch all issues (default *)

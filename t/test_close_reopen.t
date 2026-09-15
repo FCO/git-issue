@@ -9,10 +9,10 @@ REPO=$(with_repo)
 cd "$REPO"
 export EDITOR=true; export VISUAL=true
 
-issue_id=$(git issue new "Status Flow" | tail -1)
+issue_id=$(new_issue . "Status Flow")
 
 # Close and verify status
-closed_id=$(git issue close "$issue_id" | tail -1)
+closed_id=$(git issue close -f "$issue_id" | tail -1)
 tap_assert "test \"$closed_id\" = \"$issue_id\"" "close returns same id"
 tap_assert "test \"\$(blob_content '$REPO' 'refs/issues/'$issue_id':status')\" = 'closed'" "status closed"
 
@@ -21,7 +21,7 @@ out_closed=$(git issue ls closed | tr -d '\r')
 tap_assert "echo \"$out_closed\" | grep -E '^[0-9a-f]{7,} - Status Flow'" "closed issue listed in ls closed"
 
 # Reopen and verify status
-reopen_id=$(git issue reopen "$issue_id" | tail -1)
+reopen_id=$(git issue reopen -f "$issue_id" | tail -1)
 tap_assert "test \"$reopen_id\" = \"$issue_id\"" "reopen returns same id"
 tap_assert "test \"\$(blob_content '$REPO' 'refs/issues/'$issue_id':status')\" = 'open'" "status open"
 

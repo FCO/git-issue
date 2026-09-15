@@ -9,8 +9,8 @@ REPO=$(with_repo)
 cd "$REPO"
 export EDITOR=true; export VISUAL=true
 
-id1=$(git issue new "One" | tail -1)
-id2=$(git issue new "Two" | tail -1)
+id1=$(new_issue . "One")
+id2=$(new_issue . "Two")
 
 out=$(git issue ls | tr -d '\r')
 tap_assert "echo \"$out\" | grep -E '^[0-9a-f]{7,} - One'" "ls shows short hash and title"

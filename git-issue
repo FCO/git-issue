@@ -23,12 +23,26 @@ debug-cat() {
 }
 
 die() {
-	echo $@ 1>&2
-	kill -s TERM $top_pid
+	echo "$@" >&2
+	kill -s TERM "$top_pid"
 }
 
 has-fzf() {
 	type fzf > /dev/null 2>&1
+}
+
+pager() {
+	if [ -t 1 ]; then
+		if [ -n "${PAGER:-}" ]; then
+			${PAGER}
+		elif type less > /dev/null 2>&1; then
+			less
+		else
+			cat
+		fi
+	else
+		cat
+	fi
 }
 
 iss-id() {
@@ -40,33 +54,49 @@ iss-id() {
 				git issue ls $status | fzf                   \
 					--layout=reverse-list                  \
 					--accept-nth 1                         \
-					--preview='git issue show-messages {}' \
+					--preview='git issue show-messages {1}' \
 					--bind shift-up:preview-page-up,shift-down:preview-page-down
 			) || die "Aborted"
 		else
-			git issue ls $status >&2
-			echo -en "\nIssue id: " >&2
+			local list
+			list=$(git issue ls --porcelain $status 2>/dev/null || true)
+			[ -z "$list" ] && die "No issues found"
+			echo "$list" | awk -F'|' '{ printf "%d) %s  %s\n", NR, substr($1,1,7), $3 }' >&2
+			echo -en "\nIssue number or id: " >&2
 			read ID
+			if [[ "$ID" =~ ^[0-9]+$ ]]; then
+				ID=$(echo "$list" | sed -n "${ID}p" | awk -F'|' '{ print $1 }')
+			fi
 		fi
 	fi
-	git log --pretty=format:%H $ID | tail -1 2> /dev/null || echo $ID
+	local resolved
+	resolved=$(git log --pretty=format:%H "$ID" 2>/dev/null | tail -1)
+	if [ -n "$resolved" ]; then
+		echo "$resolved"
+	else
+		echo "$ID"
+	fi
 }
 
 show-messages() {
-	local ID=$(git log --pretty=format:%H $1 | tail -1 2> /dev/null || echo $1)
+	[ -z "${1:-}" ] && return 0
+	local ID
+	ID=$(git log --pretty=format:%H "$1" 2>/dev/null | tail -1 || echo "$1")
+	[ -z "$ID" ] && return 0
 	local ref="refs/issues/$ID"
-	git ls-tree --name-only "$ref" msgs/ | while read path
-	do
-		local author
-		author=$(git log --pretty=format:"%aN" $ref -- $path | tail -1)
-		type bat > /dev/null \
-			&& echo -e "\n\n$author:" \
-			&& git show $ref:$path 2> /dev/null | while read line
-				do echo "$line"; done | bat -l md -f -p \
-			|| git show $ref:$path 2> /dev/null | while read line
-				do echo "$line"; done
+	local path author
+	while read -r path; do
+		[ -z "$path" ] && continue
+		author=$(git log --pretty=format:"%aN" "$ref" -- "$path" | tail -1)
+		printf '\n\n%s:\n' "$author"
+		if [ -t 1 ] && type bat > /dev/null 2>&1; then
+			git show "$ref:$path" 2>/dev/null | bat -l md -p
+		else
+			git show "$ref:$path" 2>/dev/null
+		fi
 		echo
-	done
+	done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
+	return 0
 }
 
 path=$(readlink -f $0)
@@ -83,6 +113,24 @@ source "$(dirname $path)/git-issue-sync"
 source "$(dirname $path)/git-issue-close"
 source "$(dirname $path)/git-issue-reopen"
 source "$(dirname $path)/git-issue-fetch"
+source "$(dirname $path)/git-issue-status"
+source "$(dirname $path)/git-issue-help"
 
 set -o noglob
-[ -z $1 ] && iss-id || $1 ${@:2}
+
+cmd="${1:-}"
+
+case "$cmd" in
+	""|help|-h|--help)
+		help
+		exit 0
+		;;
+	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|pull|push|fetch|sync|show-messages)
+		"$cmd" "${@:2}"
+		;;
+	*)
+		echo "git-issue: unknown command '$cmd'" >&2
+		echo "Run 'git issue help' for usage." >&2
+		exit 2
+		;;
+esac

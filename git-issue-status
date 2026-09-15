@@ -1,15 +1,8 @@
 #!/bin/bash
 
-reopen() {
-    local force=0
-    while [ $# -gt 0 ]; do
-        case "$1" in
-            -f|--force) force=1; shift ;;
-            *) break ;;
-        esac
-    done
-
+status() {
     local iss_id
+    local status_str
     local status_file
     local sha1_status
     local tree
@@ -17,24 +10,18 @@ reopen() {
     local parent
     local commit_hash
 
-    iss_id=$(iss-id "closed" $1)
+    iss_id=$(iss-id "--all" $1)
+    status_str="$2"
+
+    [ -z "$status_str" ] && die "Status not specified"
 
     local ref="refs/issues/$iss_id"
     local path="status"
 
     git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
 
-    if [ "$force" -eq 0 ]; then
-        printf "Reopen issue %s? [y/N] " "$iss_id"
-        read -r ans
-        case "$ans" in
-            y|Y|yes|YES|Yes) ;;
-            *) die "Aborted" ;;
-        esac
-    fi
-
     status_file=$(mktemp)
-    echo "open" > $status_file
+    echo "$status_str" > $status_file
 
     sha1_status=$(git hash-object -w $status_file)
 
@@ -45,7 +32,7 @@ reopen() {
     sha1_tree=$(git mktree < $tree)
     parent=$(git show-ref --verify --hash "$ref")
 
-    commit_hash=$(echo "Issue reopened: ($iss_id)" | git commit-tree $sha1_tree -p $parent)
+    commit_hash=$(echo "Issue status: $status_str ($iss_id)" | git commit-tree $sha1_tree -p $parent)
 
     git update-ref refs/issues/$iss_id $commit_hash
 

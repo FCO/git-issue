@@ -1,32 +1,38 @@
 #!/bin/bash
 
 edit-msg() {
-    local iss_id=$(iss-id "open" $1)
+    local iss_id
+    iss_id=$(iss-id "open" "$1")
 
     local ref="refs/issues/$iss_id"
+    git show-ref --verify --quiet "$ref" || die "Not a valid issue id"
+
     local msg_no=-1
     if [ -z "$2" ]; then
-	show $iss_id
+	show "$iss_id"
 	echo "Message number: "
-	read msg_no
+	read -r msg_no
     else
 	msg_no=$2
     fi
-    [ "$msg_no" -lt 0 ] && die "Message number invalid"
+    case "$msg_no" in
+	''|*[!0-9]*) die "Message number invalid" ;;
+    esac
 
-    local path=$(git ls-tree --name-only "$ref" msgs/ | while read path; do
+    local path
+    path=$(git ls-tree --name-only "$ref" msgs/ 2>/dev/null | while read -r path; do
 	msg_no=$(( $msg_no - 1 ))
 	if [ "$msg_no" -eq 0 ]; then
-		echo $path
+		echo "$path"
 	fi
     done)
 
     [ -z "$path" ] && die "Message number invalid"
 
-    local msg_id=$(echo $path | perl -palE 's{msgs/}{}')
+    local msg_id=$(echo "$path" | perl -palE 's{msgs/}{}')
 
     local message_file=$(mktemp)
-    git show $ref:$path > $message_file
+    git show "$ref:$path" > "$message_file" 2>/dev/null
 
     "${EDITOR:=${VISUAL:-vi}}" $message_file
     local sha1_msg=$(git hash-object -w $message_file)

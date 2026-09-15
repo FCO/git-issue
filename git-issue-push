@@ -8,18 +8,20 @@ push() {
 	# successful no-op. Without this guard, `git push origin "refs/issues/*:…"`
 	# on an empty repo fails with "No refs in common and none specified".
 	if [ -z "$(git for-each-ref --format='%(refname)' "$ref")" ]; then
+		echo "pushed 0 issue(s)"
 		return 0
 	fi
 
 	local output
 	output=$(git push "$repo" "$ref:$ref" 2>&1)
 	local rc=$?
-	echo "$output" >&2
+	debug "$output"
 
 	local rejected
 	rejected=$(echo "$output" | perl -nalE 'say $1 if m{^\s*!\s+\[(?:remote )?rejected\]\s+refs/issues/(\S+)}' | sort -u)
 
 	if [ -n "$rejected" ] && [ "$times" -le 5 ]; then
+		echo "git-issue: rejected: $rejected — pulling and retrying" >&2
 		local hash
 		for hash in $rejected; do
 			git issue pull "$repo" "$hash"
@@ -28,5 +30,8 @@ push() {
 		return $?
 	fi
 
+	local n
+	n=$(printf '%s\n' "$output" | grep -cE '\-> refs/issues/' || true)
+	echo "pushed $n issue(s)"
 	return $rc
 }

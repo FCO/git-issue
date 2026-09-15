@@ -1,16 +1,33 @@
 #!/bin/bash
 
 ls() {
-	local status="$1"
+	local status="open"
+	local porcelain=0
+	local arg
+	for arg in "$@"; do
+		case "$arg" in
+			--all) status="" ;;
+			--open) status="open" ;;
+			--closed) status="closed" ;;
+			--porcelain) porcelain=1 ;;
+			-*) echo "git-issue: unknown option: $arg" >&2; return 2 ;;
+			*) status="$arg" ;;
+		esac
+	done
+
 	git for-each-ref --format="%(refname)" refs/issues/ | while read ref; do
-		local ID=$(echo $ref | perl -nalE 'say $1 if m{([^/]+?)$}')
-		echo $(git log --pretty=format:"%ct $ref %h" $ID -- 2> /dev/null || echo "0 $ref $ID")
+		local ID=$(echo "$ref" | perl -nalE 'say $1 if m{([^/]+?)$}')
+		echo $(git log --pretty=format:"%ct $ref %h" "$ID" -- 2> /dev/null || echo "0 $ref $ID")
 	done | sort | while read _ ref ID; do
 		local title=$(git show $ref:title)
 		local curr_status
 		curr_status="$(git show $ref:status)"
 		if [ -z "$status" ] || [ "$curr_status" = "$status" ]; then
-			printf "%s - %s\n" $ID "$title"
+			if [ "$porcelain" -eq 1 ]; then
+				printf "%s|%s|%s\n" "${ref##*/}" "$curr_status" "$title"
+			else
+				printf "%s - %s\n" "$ID" "$title"
+			fi
 		fi
 	done
 	return 0

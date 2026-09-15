@@ -1,0 +1,1 @@
+Added t/test_all_issues.t and made fetch --prune stale remote-issues refs so deleted remote issues are not resurrected.

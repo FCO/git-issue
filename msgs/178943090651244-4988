@@ -1,0 +1,1 @@
+Rewrote pull/push/fetch/sync to import new issues, fast-forward, three-way merge divergent trees via git merge-tree, and auto-retry rejected pushes.

@@ -58,6 +58,8 @@ edit-msg() {
     local tree=$(mktemp)
     git ls-tree "$ref" | grep -v "\tmsgs$" > "$tree"
     echo "040000 tree $sha1_msgs_tree	msgs" >> "$tree"
+    echo "DEBUG edit-msg top-level tree:" >&2
+    cat "$tree" >&2
 
     local sha1_tree=$(git mktree < "$tree")
     local parent=$(git show-ref --verify --hash "$ref")

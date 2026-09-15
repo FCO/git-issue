@@ -1,0 +1,1 @@
+git issue ls --tag '!bug' now matches issues that do not have the bug tag.

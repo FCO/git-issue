@@ -102,6 +102,10 @@ paths_after=$(git -C "$REPO" ls-tree --name-only "refs/issues/$id" msgs/ | sort)
 c1_after=$(git -C "$REPO" show "refs/issues/$id:msgs/$m1")
 c2_after=$(git -C "$REPO" show "refs/issues/$id:msgs/$m2")
 
+echo "DEBUG m1=[$m1] m2=[$m2]" >&2
+echo "DEBUG c1_before=[$c1_before] c1_after=[$c1_after] c2_after=[$c2_after]" >&2
+echo "DEBUG paths_before=[$paths_before] paths_after=[$paths_after]" >&2
+
 tap_assert "test \"\$c2_after\" = 'second body EDITED'" "edit-msg: selected message (number 2) content changed"
 tap_assert "test \"\$c1_after\" = \"\$c1_before\"" "edit-msg: other message content untouched"
 tap_assert "test \"\$paths_before\" = \"\$paths_after\"" "edit-msg: message ids (filenames) preserved"

@@ -1,5 +1,7 @@
 # git-issue
 
+> ## 🔗 [View the generated issue pages →](https://fco.github.io/git-issue/)
+
 A small set of Git scripts that manage issues directly in Git’s object store, modeling each issue as a ref (`refs/issues/*`) with trees/commits — no external server required. It also includes a static HTML generator (`git-issue-generate-page`) that renders an index and one page per issue directly from `refs/issues/*`, with timestamps, authors, and permalinks — no JavaScript or API required.
 
 ## Concept

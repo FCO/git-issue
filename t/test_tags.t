@@ -24,12 +24,18 @@ tap_assert "test \"\$(echo \"\$tags\" | wc -l | tr -d ' ')\" = '2'" "tag dedupes
 tap_assert "test \"\$(blob_content '$REPO' 'refs/issues/$id:title')\" = 'Tagged issue'" "tag preserves the title"
 tap_assert "test \"\$(blob_content '$REPO' 'refs/issues/$id:status')\" = 'open'" "tag preserves the status"
 tap_assert "test \"\$(msgs_count '$REPO' '$id')\" = '1'" "tag preserves the messages"
+tap_assert "echo \"\$(git issue ls --all)\" | grep -Fq '[bug, urgent]'" "ls displays tags"
 
 # --- ls --tag filter ----------------------------------------------------------
 untagged=$(new_issue . "Untagged issue")
 tap_assert "echo \"\$(git issue ls --all --tag bug)\" | grep -q 'Tagged issue'" "ls --tag matches a tagged issue"
 tap_assert "! echo \"\$(git issue ls --all --tag bug)\" | grep -q 'Untagged issue'" "ls --tag excludes an untagged issue"
 tap_assert "test -z \"\$(git issue ls --all --tag nonexistent)\"" "ls --tag with no matches prints nothing"
+
+# --- !tag negation ----------------------------------------------------------
+out=$(git issue ls --all --tag '!bug')
+tap_assert "echo \"\$out\" | grep -q 'Untagged issue'" "ls --tag '!bug' matches untagged issues"
+tap_assert "! echo \"\$out\" | grep -q 'Tagged issue'" "ls --tag '!bug' excludes tagged issues"
 
 # --- tag filter combines with status filter ------------------------------------
 git issue close -f "$untagged" >/dev/null

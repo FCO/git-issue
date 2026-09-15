@@ -15,6 +15,9 @@ reply_id=$(git issue reply "$id1" | tail -1)
 id2=$(new_issue . "Closed Thing")
 git issue close -f "$id2" > /dev/null
 
+git issue priority "$id1" 50 > /dev/null
+git issue tag "$id1" bug web > /dev/null
+
 # Run the generator from inside the temp repo so it writes to $REPO/docs
 # instead of clobbering the project's tracked docs/ directory.
 cp "$PROJECT_DIR/git-issue-generate-page" "$REPO/git-issue-generate-page"
@@ -50,5 +53,14 @@ tap_assert "grep -F 'href=\"closed.html\"' \"$index_page\"" "index links to clos
 tap_assert "grep -F 'Closed Thing' \"$closed_page\"" "closed page lists the closed issue"
 tap_assert "! grep -F 'Web Test' \"$closed_page\"" "closed page omits the open issue"
 tap_assert "grep -F 'href=\"index.html\"' \"$closed_page\"" "closed page links to index"
+
+# Priority and tags are shown on the issue page; per-tag pages + tags index.
+tap_assert "grep -F 'Priority: <strong>50</strong>' \"$issue_page\"" "issue page shows priority"
+tap_assert "grep -F '../tags/bug.html' \"$issue_page\"" "issue page links its tag"
+tap_assert "test -f \"$REPO/docs/tags.html\"" "tags index exists"
+tap_assert "grep -F 'href=\"tags/bug.html\"' \"$REPO/docs/tags.html\"" "tags index links a tag page"
+tap_assert "test -f \"$REPO/docs/tags/bug.html\"" "tag page exists"
+tap_assert "grep -F 'Web Test' \"$REPO/docs/tags/bug.html\"" "tag page lists the issue"
+tap_assert "grep -F 'href=\"tags.html\"' \"$index_page\"" "index links to tags index"
 
 tap_done

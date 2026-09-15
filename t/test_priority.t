@@ -77,4 +77,10 @@ show_out=$(git issue show "$id3")
 tap_assert "echo \"\$show_out\" | grep -Fq 'Priority: 100'" "show displays non-default priority"
 tap_assert "echo \"\$show_out\" | head -1 | grep -E '^[0-9a-f]{7,} - Hundred'" "show header first line unchanged"
 
+# --- ls displays non-default priority; porcelain includes priority -------------
+ls_all=$(git issue ls --all --sort priority)
+tap_assert "echo \"\$ls_all\" | grep -Fq '[P:100]'" "ls displays non-default priority"
+porc_all=$(git issue ls --porcelain --all)
+tap_assert "echo \"\$porc_all\" | grep -Fq '|100'" "porcelain includes priority field"
+
 tap_done

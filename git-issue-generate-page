@@ -1,8 +1,9 @@
 #!/bin/bash
 
 # Generate multiple static HTML pages for git issues
-# - index.html: open issues (with a link to closed.html)
+# - index.html: open issues (with a link to closed.html and tags.html)
 # - closed.html: closed issues (with a link back to index.html)
+# - tags.html: index of all tags; tags/<tag>.html: issues with that tag
 # - One page per issue (detalhes) based on git-issue-show logic
 # - Dark theme, cross-linked pages with timestamps and permalinks
 #
@@ -12,6 +13,34 @@ set -euo pipefail
 
 escape_html() {
   sed -e 's/&/\&amp;/g' -e 's/</\&lt;/g' -e 's/>/\&gt;/g'
+}
+
+# Echo comma-separated <a> links for the tags of an issue ref. `rel` is the
+# relative path prefix to the tags directory (e.g. "tags/" or "../tags/").
+tags_links_html() {
+  local ref="$1" rel="$2"
+  local tags
+  tags=$(git show "$ref:tags" 2>/dev/null)
+  [ -z "$tags" ] && return 0
+  local first=1 t esc
+  while IFS= read -r t; do
+    [ -z "$t" ] && continue
+    esc=$(printf '%s' "$t" | escape_html)
+    if [ "$first" -eq 1 ]; then
+      printf '<a href="%s%s.html">%s</a>' "$rel" "$t" "$esc"
+      first=0
+    else
+      printf ', <a href="%s%s.html">%s</a>' "$rel" "$t" "$esc"
+    fi
+  done <<< "$tags"
+}
+
+# Echo each distinct tag used by any issue, sorted.
+collect_tags() {
+  list_issues "" | while IFS='|' read -r _ _ ref _; do
+    [ -z "$ref" ] && continue
+    git show "$ref:tags" 2>/dev/null
+  done | grep -v '^$' | sort -u || true
 }
 
 list_issues() {
@@ -90,7 +119,7 @@ write_list_page() {
   {
     echo "  <header>"
     echo "    <h1>$heading</h1>"
-    echo "    <p class=\"muted\">List based on git-issue-ls logic · <a href=\"$other_href\">$other_label</a></p>"
+    echo "    <p class=\"muted\">List based on git-issue-ls logic · <a href=\"$other_href\">$other_label</a> · <a href=\"tags.html\">Tags</a></p>"
     echo "  </header>"
     echo "  <div class=\"card\">"
     echo "    <ul class=\"list\">"
@@ -112,7 +141,17 @@ write_list_page() {
             opened_ai="$ts_ai"
           fi
         done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null)
-        echo -n "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"issues/$slug.html\">$(printf '%s' "$title" | escape_html)</a></div>"
+        echo -n "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"issues/$slug.html\">$(printf '%s' "$title" | escape_html)</a>"
+        local prio tags_html
+        prio=$(git show "$ref:priority" 2>/dev/null || echo 0)
+        if [ -n "$prio" ] && [ "$prio" != "0" ]; then
+          echo -n " <span class=\"muted\">[P:$prio]</span>"
+        fi
+        tags_html=$(tags_links_html "$ref" "tags/")
+        if [ -n "$tags_html" ]; then
+          echo -n " <span class=\"muted\">[$tags_html]</span>"
+        fi
+        echo -n "</div>"
         if [ -n "$opened_ai" ]; then
           echo " <span class=\"muted\">$opened_ai</span></li>"
         else
@@ -169,6 +208,16 @@ write_issue_page() {
     else
       echo "    <p class=\"muted\">Opened by <strong>$(printf '%s' "$opener" | escape_html)</strong></p>"
     fi
+
+    local priority tags_html
+    priority=$(git show "$ref:priority" 2>/dev/null || echo 0)
+    if [ -n "$priority" ] && [ "$priority" != "0" ]; then
+      echo "    <p class=\"muted\">Priority: <strong>$(printf '%s' "$priority" | escape_html)</strong></p>"
+    fi
+    tags_html=$(tags_links_html "$ref" "../tags/")
+    if [ -n "$tags_html" ]; then
+      echo "    <p class=\"muted\">Tags: $tags_html</p>"
+    fi
     echo "  </header>"
 
     echo "  <section class=\"card\">"
@@ -206,6 +255,66 @@ page_tail() {
 EOF
 }
 
+write_tags_index_page() {
+  local out_dir="$1"
+  local out_file="$out_dir/tags.html"
+  page_head "Tags" > "$out_file"
+  {
+    echo "  <header>"
+    echo "    <h1>Tags</h1>"
+    echo "    <p class=\"muted\"><a href=\"index.html\">← Back to list</a></p>"
+    echo "  </header>"
+    echo "  <div class=\"card\">"
+    echo "    <ul class=\"list\">"
+    local found=0 tag esc
+    while IFS= read -r tag; do
+      [ -z "$tag" ] && continue
+      found=1
+      esc=$(printf '%s' "$tag" | escape_html)
+      echo "      <li><a href=\"tags/$tag.html\">$esc</a></li>"
+    done < <(collect_tags)
+    if [ "$found" -eq 0 ]; then
+      echo "      <li>No tags.</li>"
+    fi
+    echo "    </ul>"
+    echo "  </div>"
+  } >> "$out_file"
+  page_tail >> "$out_file"
+  echo "[git-issue] Tags index: $out_file"
+}
+
+write_tag_page() {
+  local out_dir="$1" tag="$2"
+  local esc_tag
+  esc_tag=$(printf '%s' "$tag" | escape_html)
+  local out_file="$out_dir/tags/$tag.html"
+  mkdir -p "$out_dir/tags"
+  page_head "Tag: $tag" > "$out_file"
+  {
+    echo "  <header>"
+    echo "    <h1>Tag: $esc_tag</h1>"
+    echo "    <p class=\"muted\"><a href=\"../index.html\">← Back to list</a> · <a href=\"../tags.html\">All tags</a></p>"
+    echo "  </header>"
+    echo "  <div class=\"card\">"
+    echo "    <ul class=\"list\">"
+    local found=0
+    while IFS='|' read -r id abb ref title; do
+      [ -z "$ref" ] && continue
+      if printf '%s\n' "$(git show "$ref:tags" 2>/dev/null)" | grep -Fxq "$tag"; then
+        found=1
+        echo "      <li><div class=\"left\"><span class=\"badge\">$abb</span> <a href=\"../issues/$abb.html\">$(printf '%s' "$title" | escape_html)</a></div></li>"
+      fi
+    done < <(list_issues "")
+    if [ "$found" -eq 0 ]; then
+      echo "      <li>No issues with this tag.</li>"
+    fi
+    echo "    </ul>"
+    echo "  </div>"
+  } >> "$out_file"
+  page_tail >> "$out_file"
+  echo "[git-issue] Tag page: $out_file"
+}
+
 generate_pages() {
   local out_dir="$(dirname "$0")/docs"
   mkdir -p "$out_dir"
@@ -213,9 +322,15 @@ generate_pages() {
 
   write_list_page "$out_dir" "index.html" "Open Issues" "open" "closed.html" "View closed issues"
   write_list_page "$out_dir" "closed.html" "Closed Issues" "closed" "index.html" "View open issues"
+  write_tags_index_page "$out_dir"
 
   list_issues "" | while IFS='|' read -r id abb ref title; do
     write_issue_page "$out_dir" "$id" "$abb" "$ref"
+  done
+
+  collect_tags | while IFS= read -r tag; do
+    [ -z "$tag" ] && continue
+    write_tag_page "$out_dir" "$tag"
   done
 
   echo "[git-issue] Done. Open docs/index.html"

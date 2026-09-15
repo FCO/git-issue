@@ -70,6 +70,7 @@ ls() {
 		title=$(git show "$ref:title" 2>/dev/null)
 		curr_status=$(git show "$ref:status" 2>/dev/null)
 		prio=$(git show "$ref:priority" 2>/dev/null || echo 0)
+		tags=$(git show "$ref:tags" 2>/dev/null)
 
 		if [ -n "$status" ] && [ "$curr_status" != "$status" ]; then
 			continue
@@ -84,19 +85,36 @@ ls() {
 			continue
 		fi
 		if [ -n "$tag_filter" ]; then
-			tags=$(git show "$ref:tags" 2>/dev/null)
-			if ! printf '%s\n' "$tags" | grep -Fxq "$tag_filter"; then
-				continue
+			local filter negate
+			filter="$tag_filter"
+			negate=0
+			case "$filter" in
+				'!'*) negate=1; filter="${filter#!}" ;;
+			esac
+			if printf '%s\n' "$tags" | grep -Fxq "$filter"; then
+				[ "$negate" -eq 1 ] && continue
+			else
+				[ "$negate" -eq 0 ] && continue
 			fi
 		fi
 
 		if [ "$porcelain" -eq 1 ]; then
-			printf "%s|%s|%s\n" "$id" "$curr_status" "$title"
+			printf "%s|%s|%s|%s\n" "$id" "$curr_status" "$title" "$prio"
 		else
 			local short
 			short=$(git log --pretty=format:%h "$id" 2>/dev/null | tail -1)
 			[ -z "$short" ] && short="$id"
-			printf "%s - %s\n" "$short" "$title"
+			local line
+			line="$short - $title"
+			if [ -n "$prio" ] && [ "$prio" != "0" ]; then
+				line="$line  [P:$prio]"
+			fi
+			local tags_joined
+			tags_joined=$(printf '%s\n' "$tags" | awk 'NR>1{printf ", "} {printf "%s", $0} END{print ""}')
+			if [ -n "$tags_joined" ]; then
+				line="$line  [$tags_joined]"
+			fi
+			printf '%s\n' "$line"
 		fi
 	done
 	return 0

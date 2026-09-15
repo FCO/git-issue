@@ -16,7 +16,10 @@ Commands:
                                  --open, --closed, --porcelain, or a positional
                                  <status> string (any status value). Also
                                  accepts --sort date|priority, --priority-gt N,
-                                 --priority-lt N, --priority N, and --tag T.
+                                 --priority-lt N, --priority N, and --tag T
+                                 (use --tag '!T' to exclude a tag). Lists show
+                                 non-default priority and tags; --porcelain
+                                 includes the priority as the last field.
   edit-title [<id>]              Edit an issue's title.
   edit-msg [<id>] [<n>]          Edit message number <n> (1-based) of an issue.
   status <id> <status>           Set an arbitrary status string.

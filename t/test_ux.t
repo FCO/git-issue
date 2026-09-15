@@ -44,7 +44,7 @@ tap_assert "test \"\$(blob_content '$REPO' 'refs/issues/'$full':status')\" = 'in
 
 # --- ls --porcelain ----------------------------------------------------------
 porc=$(git issue ls --porcelain --all | tr -d '\r' || true)
-tap_assert "echo \"$porc\" | grep -qE '^'\"$full\"'\|in-progress\|Ux Title$'" "porcelain format full|status|title"
+tap_assert "echo \"$porc\" | grep -qE '^'\"$full\"'\|in-progress\|Ux Title\|0$'" "porcelain format full|status|title|priority"
 
 porc_open=$(git issue ls --porcelain | tr -d '\r' || true)
 tap_assert "! echo \"$porc_open\" | grep -q 'Ux Title'" "porcelain default hides non-open"

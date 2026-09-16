@@ -34,8 +34,6 @@ edit-msg() {
     git show "$ref:msgs/$msg_id" > "$message_file" 2>/dev/null
 
     "${EDITOR:=${VISUAL:-vi}}" "$message_file"
-    echo "DEBUG edit-msg EDITOR=[$EDITOR] content after editor:" >&2
-    cat "$message_file" >&2
     local sha1_msg=$(git hash-object -w "$message_file")
 
     local msgs_tree=$(mktemp)
@@ -49,17 +47,11 @@ edit-msg() {
     done < <(git ls-tree --name-only "$ref" msgs/ 2>/dev/null) > "$msgs_tree"
     echo "100644 blob $sha1_msg	$msg_id" >> "$msgs_tree"
 
-    echo "DEBUG edit-msg msg_id=[$msg_id]" >&2
-    echo "DEBUG edit-msg msgs_tree:" >&2
-    cat "$msgs_tree" >&2
-
     local sha1_msgs_tree=$(git mktree < "$msgs_tree")
 
     local tree=$(mktemp)
-    git ls-tree "$ref" | grep -v "\tmsgs$" > "$tree"
+    git ls-tree "$ref" | grep -v "msgs$" > "$tree"
     echo "040000 tree $sha1_msgs_tree	msgs" >> "$tree"
-    echo "DEBUG edit-msg top-level tree:" >&2
-    cat "$tree" >&2
 
     local sha1_tree=$(git mktree < "$tree")
     local parent=$(git show-ref --verify --hash "$ref")

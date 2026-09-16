@@ -97,6 +97,14 @@ Ensure the git-issue scripts are available on your `PATH` so Git can discover th
     - `git issue config sort` (get the `sort` value)
     - `git issue config sort priority` (set `sort` to `priority`)
     - `git issue config --unset sort` (remove `sort`)
+- `git issue import [<OWNER>/<REPO>] [--state open|closed|all] [--comments]`
+  - Imports GitHub issues (and optionally their comments) into `refs/issues/*` from a public repository. Read-only on GitHub — nothing is deleted. Defaults to the `origin` remote's repo when no argument is given.
+  - Anonymous (no login) by default, limited to public repos and GitHub's 60 req/hour; set `GITHUB_TOKEN` for private repos and full imports.
+  - Each imported issue preserves its original author and date (per-message commits), maps `state`→status and labels→tags, and is tagged `gh-<number>` so re-runs skip it.
+  - Requires `curl` and `jq`.
+  - Examples:
+    - `git issue import octocat/Hello-World`
+    - `git issue import octocat/Hello-World --state open --comments`
 - `git issue pull` / `git issue push` / `git issue sync`
   - Synchronize issue refs with the remote: fetch/push `refs/issues/*`.
   - Examples:

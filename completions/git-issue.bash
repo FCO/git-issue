@@ -7,7 +7,7 @@
 _git_issue_complete() {
     local cur
     cur="${COMP_WORDS[COMP_CWORD]}"
-    local subcommands="help new reply show ls edit-title edit-msg status close reopen priority tag untag config pull push fetch sync"
+    local subcommands="help new reply show ls edit-title edit-msg status close reopen priority tag untag config import pull push fetch sync"
 
     if [ "$COMP_CWORD" -eq 1 ]; then
         COMPREPLY=( $(compgen -W "$subcommands" -- "$cur") )
@@ -35,6 +35,9 @@ _git_issue_complete() {
             ;;
         new)
             COMPREPLY=( $(compgen -W "-m --message" -- "$cur") )
+            ;;
+        import)
+            COMPREPLY=( $(compgen -W "--state --comments" -- "$cur") )
             ;;
     esac
     return 0

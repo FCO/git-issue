@@ -1,0 +1,209 @@
+#!/bin/bash
+
+# Import GitHub issues (and optionally their comments) from a public GitHub
+# repository into the local git-issue store, preserving the original author,
+# date, state, and labels. This only reads from GitHub (GET) — nothing on the
+# remote is modified or deleted.
+#
+# Usage: git issue import [<owner>/<repo>] [--state open|closed|all] [--comments]
+#
+# - Auth: anonymous (public repos, 60 req/hr) unless $GITHUB_TOKEN is set.
+# - Dedup: imported issues are tagged `gh-<number>`; re-runs skip them.
+# - Authors: each message becomes its own commit authored by the original
+#   GitHub user (`<id>+<login>@users.noreply.github.com`) at the original date.
+
+github_repo_from_origin() {
+	local url
+	url=$(git config --get remote.origin.url 2>/dev/null) || return 0
+	case "$url" in
+		git@github.com:*) printf '%s\n' "${url#git@github.com:}" ;;
+		https://github.com/*) printf '%s\n' "${url#https://github.com/}" ;;
+		*) return 0 ;;
+	esac
+}
+
+_gh_get() {
+	local url="$1"
+	if [ -n "${GITHUB_TOKEN:-}" ]; then
+		curl -sS -H "User-Agent: git-issue" -H "Authorization: Bearer $GITHUB_TOKEN" "$url"
+	else
+		curl -sS -H "User-Agent: git-issue" "$url"
+	fi
+}
+
+_import_already() {
+	local num="$1"
+	git for-each-ref --format='%(refname)' refs/issues/ 2>/dev/null \
+		| while IFS= read -r ref; do git show "$ref:tags" 2>/dev/null; done \
+		| grep -Fxq "gh-$num"
+}
+
+_import_commit() {
+	local name="$1" email="$2" date="$3" tree="$4"
+	shift 4
+	GIT_AUTHOR_NAME="$name" GIT_AUTHOR_EMAIL="$email" GIT_AUTHOR_DATE="$date" \
+	GIT_COMMITTER_NAME="$name" GIT_COMMITTER_EMAIL="$email" GIT_COMMITTER_DATE="$date" \
+		git commit-tree "$tree" "$@"
+}
+
+_import_build_issue() {
+	local repo="$1" num="$2" title="$3" body="$4" state="$5" login="$6" uid="$7" created_at="$8" labels="$9" with_comments="${10}"
+
+	local email="$uid+$login@users.noreply.github.com"
+
+	local sha_title sha_status sha_prio
+	sha_title=$(printf '%s' "$title" | git hash-object -w --stdin)
+	sha_status=$(printf '%s\n' "$state" | git hash-object -w --stdin)
+	sha_prio=$(printf '0\n' | git hash-object -w --stdin)
+
+	local tags_file
+	tags_file=$(mktemp)
+	printf '%s\n' "$labels" | while IFS= read -r l; do
+		[ -z "$l" ] && continue
+		printf '%s\n' "$l"
+	done > "$tags_file"
+	printf 'gh-%s\n' "$num" >> "$tags_file"
+	local sha_tags
+	sha_tags=$(git hash-object -w "$tags_file")
+
+	local msgs_tree_file
+	msgs_tree_file=$(mktemp)
+	if [ -n "$body" ]; then
+		local msg_id sha_msg
+		msg_id=$(gen_id)
+		sha_msg=$(printf '%s\n' "$body" | git hash-object -w --stdin)
+		printf '100644 blob %s\t%s\n' "$sha_msg" "$msg_id" > "$msgs_tree_file"
+	fi
+
+	local sha_msgs_tree
+	sha_msgs_tree=$(git mktree < "$msgs_tree_file")
+
+	local tree_file
+	tree_file=$(mktemp)
+	printf '100644 blob %s\ttitle\n' "$sha_title" > "$tree_file"
+	printf '100644 blob %s\tstatus\n' "$sha_status" >> "$tree_file"
+	printf '100644 blob %s\tpriority\n' "$sha_prio" >> "$tree_file"
+	printf '100644 blob %s\ttags\n' "$sha_tags" >> "$tree_file"
+	printf '040000 tree %s\tmsgs\n' "$sha_msgs_tree" >> "$tree_file"
+
+	local sha_tree
+	sha_tree=$(git mktree < "$tree_file")
+
+	local first_commit
+	first_commit=$(_import_commit "$login" "$email" "$created_at" "$sha_tree" -m "Imported from GitHub issue #$num")
+
+	local ref="refs/issues/$first_commit"
+	git update-ref "$ref" "$first_commit"
+
+	if [ "$with_comments" -eq 1 ]; then
+		local comments
+		comments=$(_gh_get "https://api.github.com/repos/$repo/issues/$num/comments?per_page=100")
+		if ! echo "$comments" | jq -e 'type == "array"' >/dev/null 2>&1; then
+			comments=""
+		fi
+		local tip="$first_commit"
+		while IFS= read -r c; do
+			[ -z "$c" ] && continue
+			local c_login c_uid c_created c_body
+			c_login=$(echo "$c" | jq -r '.user.login // "unknown"')
+			c_uid=$(echo "$c" | jq -r '.user.id // 0')
+			c_created=$(echo "$c" | jq -r '.created_at')
+			c_body=$(echo "$c" | jq -r '.body // ""')
+
+			local c_id c_sha
+			c_id=$(gen_id)
+			c_sha=$(printf '%s\n' "$c_body" | git hash-object -w --stdin)
+			printf '100644 blob %s\t%s\n' "$c_sha" "$c_id" >> "$msgs_tree_file"
+
+			local c_msgs_tree c_tree
+			c_msgs_tree=$(git mktree < "$msgs_tree_file")
+			c_tree=$(
+				{
+					printf '100644 blob %s\ttitle\n' "$sha_title"
+					printf '100644 blob %s\tstatus\n' "$sha_status"
+					printf '100644 blob %s\tpriority\n' "$sha_prio"
+					printf '100644 blob %s\ttags\n' "$sha_tags"
+					printf '040000 tree %s\tmsgs\n' "$c_msgs_tree"
+				} | git mktree
+			)
+
+			local c_email c_commit
+			c_email="$c_uid+$c_login@users.noreply.github.com"
+			c_commit=$(_import_commit "$c_login" "$c_email" "$c_created" "$c_tree" -p "$tip" -m "Imported comment on GitHub issue #$num")
+			git update-ref "$ref" "$c_commit"
+			tip="$c_commit"
+		done < <(echo "$comments" | jq -c '.[]')
+	fi
+
+	echo "$first_commit"
+}
+
+import() {
+	local repo=""
+	local state="all"
+	local with_comments=0
+
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--state)
+				[ $# -ge 2 ] || { echo "git-issue: --state requires an argument" >&2; return 2; }
+				state="$2"
+				shift 2
+				;;
+			--comments) with_comments=1; shift ;;
+			-*) echo "git-issue: unknown option: $1" >&2; return 2 ;;
+			*) repo="$1"; shift ;;
+		esac
+	done
+
+	case "$state" in
+		open|closed|all) ;;
+		*) die "Invalid --state '$state' (use open, closed, or all)" ;;
+	esac
+
+	if [ -z "$repo" ]; then
+		repo=$(github_repo_from_origin)
+	fi
+	[ -z "$repo" ] && die "No repository; use 'git issue import <owner>/<repo>'"
+
+	command -v curl >/dev/null 2>&1 || die "curl is required for import"
+	command -v jq >/dev/null 2>&1 || die "jq is required for import"
+
+	local url="https://api.github.com/repos/$repo/issues?state=$state&per_page=100"
+	local resp
+	resp=$(_gh_get "$url") || die "Failed to reach the GitHub API"
+
+	if echo "$resp" | jq -e 'type == "object" and has("message")' >/dev/null 2>&1; then
+		local errmsg
+		errmsg=$(echo "$resp" | jq -r '.message')
+		die "GitHub API error: $errmsg"
+	fi
+
+	local imported=0 skipped=0
+	while IFS= read -r item; do
+		[ -z "$item" ] && continue
+
+		local num title body state login uid created_at labels
+		num=$(echo "$item" | jq -r '.number')
+		title=$(echo "$item" | jq -r '.title')
+		body=$(echo "$item" | jq -r '.body // ""')
+		state=$(echo "$item" | jq -r '.state')
+		login=$(echo "$item" | jq -r '.user.login // "unknown"')
+		uid=$(echo "$item" | jq -r '.user.id // 0')
+		created_at=$(echo "$item" | jq -r '.created_at')
+		labels=$(echo "$item" | jq -r '.labels[]?.name // empty')
+
+		if _import_already "$num"; then
+			echo "skip   #$num $title"
+			skipped=$(( skipped + 1 ))
+			continue
+		fi
+
+		local id
+		id=$(_import_build_issue "$repo" "$num" "$title" "$body" "$state" "$login" "$uid" "$created_at" "$labels" "$with_comments")
+		echo "import #$num $(git rev-parse --short "$id") - $title"
+		imported=$(( imported + 1 ))
+	done < <(echo "$resp" | jq -c '.[] | select(.pull_request == null)')
+
+	echo "Imported $imported issue(s), skipped $skipped."
+}

@@ -29,6 +29,11 @@ Commands:
   config [<key> [<value>]]       List, get, or set configuration (stored in
                                  refs/issue-config). Use `--unset <key>` to
                                  remove a key.
+  import [<owner>/<repo>]        Import GitHub issues into refs/issues/* (reads
+                                 only, never deletes). Accepts --state
+                                 open|closed|all and --comments. Anonymous
+                                 unless $GITHUB_TOKEN is set; tags each issue
+                                 with gh-<number> and preserves authors/dates.
   close [-f] [<id>]              Mark an issue closed (prompts unless -f).
   reopen [-f] [<id>]             Re-open a closed issue (prompts unless -f).
   pull [<remote>] [<id>]         Fetch and merge remote issue refs.

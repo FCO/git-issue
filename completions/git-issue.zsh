@@ -20,6 +20,7 @@ _git-issue() {
         'tag:Add tags to an issue'
         'untag:Remove tags from an issue'
         'config:List, get, or set configuration'
+        'import:Import GitHub issues into refs/issues'
         'close:Close an issue'
         'reopen:Reopen an issue'
         'pull:Pull issue refs'
@@ -50,6 +51,9 @@ _git-issue() {
             ;;
         new)
             _values 'flag' '-m' '--message'
+            ;;
+        import)
+            _values 'flag' '--state' '--comments'
             ;;
         close|reopen)
             _values 'flag' '-f' '--force'

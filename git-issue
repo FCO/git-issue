@@ -117,6 +117,7 @@ source "$(dirname $path)/git-issue-close"
 source "$(dirname $path)/git-issue-reopen"
 source "$(dirname $path)/git-issue-fetch"
 source "$(dirname $path)/git-issue-status"
+source "$(dirname $path)/git-issue-import"
 source "$(dirname $path)/git-issue-help"
 
 set -o noglob
@@ -128,7 +129,7 @@ case "$cmd" in
 		help
 		exit 0
 		;;
-	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|priority|tag|untag|config|pull|push|fetch|sync|show-messages)
+	new|reply|show|ls|edit-title|edit-msg|close|reopen|status|priority|tag|untag|config|import|pull|push|fetch|sync|show-messages)
 		"$cmd" "${@:2}"
 		;;
 	*)
